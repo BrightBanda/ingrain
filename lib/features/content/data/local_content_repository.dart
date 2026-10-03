@@ -1,0 +1,144 @@
+import 'package:ingrain/core/storage/local_document_store.dart';
+import 'package:ingrain/features/auth/domain/auth_repository.dart';
+import 'package:ingrain/features/content/data/content_item_dto.dart';
+import 'package:ingrain/features/content/domain/content_item.dart';
+import 'package:ingrain/features/content/domain/content_repository.dart';
+import 'package:ingrain/features/content/domain/transcript_sentence.dart';
+
+class LocalContentRepository implements ContentRepository {
+  final LocalDocumentStore _store;
+  final AuthRepository _auth;
+
+  LocalContentRepository(this._store, this._auth);
+
+  static const String collection = 'contentHistory';
+
+  @override
+  Future<ContentItem> getContent(String id) async {
+    final uid = await _auth.ensureUid();
+    final doc = await _store.getDoc(uid, collection, id);
+    if (doc.isEmpty) {
+      throw Exception('Content not found: $id');
+    }
+    return ContentItemDto.fromMap(doc).toDomain();
+  }
+
+  @override
+  Stream<List<ContentItem>> watchAll() async* {
+    final uid = await _auth.ensureUid();
+    final docs = await _store.listDocs(uid, collection);
+    yield docs.map((d) => ContentItemDto.fromMap(d).toDomain()).toList();
+  }
+
+  @override
+  Future<void> save(ContentItem item) async {
+    final uid = await _auth.ensureUid();
+    await _store.setDoc(
+      uid,
+      collection,
+      item.id,
+      ContentItemDto(
+        id: item.id,
+        sourceType: item.sourceType,
+        sourceUrl: item.sourceUrl,
+        title: item.title,
+        channelTitle: item.channelTitle,
+        thumbnailUrl: item.thumbnailUrl,
+        lastPositionSeconds: item.lastPositionSeconds,
+        totalImmersionSeconds: item.totalImmersionSeconds,
+        lastOpenedAt: item.lastOpenedAt,
+      ).map,
+    );
+  }
+
+  @override
+  Future<ContentItem> create({
+    required String sourceUrl,
+    required String title,
+    String? channelTitle,
+    String? thumbnailUrl,
+    SourceType sourceType = SourceType.youtube,
+  }) async {
+    final id = sourceType == SourceType.youtube
+        ? _extractVideoId(sourceUrl)
+        : _generateId();
+    final item = ContentItem(
+      id: id,
+      sourceType: sourceType,
+      sourceUrl: sourceUrl,
+      title: title,
+      channelTitle: channelTitle,
+      thumbnailUrl: thumbnailUrl,
+      lastOpenedAt: DateTime.now(),
+    );
+    await save(item);
+    return item;
+  }
+
+  @override
+  Future<void> updateLastPosition(String id, int seconds) async {
+    final uid = await _auth.ensureUid();
+    final existing = await _store.getDoc(uid, collection, id);
+    existing['lastPositionSeconds'] = seconds;
+    existing['lastOpenedAt'] = DateTime.now().toIso8601String();
+    await _store.setDoc(uid, collection, id, existing);
+  }
+
+  @override
+  Future<void> delete(String id) async {
+    final uid = await _auth.ensureUid();
+    await _store.deleteDoc(uid, collection, id);
+  }
+
+  @override
+  Future<List<TranscriptSentence>> getTranscript(String contentId) async {
+    final uid = await _auth.ensureUid();
+    final doc = await _store.getDoc(
+      uid,
+      '$collection/$contentId',
+      'transcript',
+    );
+    final data = doc['sentences'];
+    if (data == null || data is! List) return [];
+    return data.asMap().entries.map((entry) {
+      final m = Map<String, dynamic>.from(entry.value as Map);
+      return TranscriptSentence(
+        index: entry.key,
+        text: m['text'] as String,
+        startSeconds: (m['startSeconds'] as num).toInt(),
+        endSeconds: (m['endSeconds'] as num).toInt(),
+      );
+    }).toList();
+  }
+
+  @override
+  Future<void> saveTranscript(
+    String contentId,
+    List<TranscriptSentence> sentences,
+  ) async {
+    final uid = await _auth.ensureUid();
+    final data = sentences
+        .map(
+          (s) => {
+            'index': s.index,
+            'text': s.text,
+            'startSeconds': s.startSeconds,
+            'endSeconds': s.endSeconds,
+          },
+        )
+        .toList();
+    await _store.setDoc(uid, '$collection/$contentId', 'transcript', {
+      'sentences': data,
+    });
+  }
+
+  static String _extractVideoId(String url) {
+    final match = RegExp(r'([a-zA-Z0-9_-]{11})').firstMatch(url);
+    if (match != null) return match.group(1)!;
+    return _generateId();
+  }
+
+  static String _generateId() {
+    return DateTime.now().millisecondsSinceEpoch.toRadixString(36);
+  }
+}

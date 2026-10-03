@@ -1,0 +1,23 @@
+{
+  "meta": {
+    "license": "CC BY-SA 4.0",
+    "source": "JMdict/EDICT",
+    "attribution": "This dictionary data is derived from JMdict (CC BY-SA 4.0). See https://www.jdic.org/codedoc JMdict for licensing details.",
+    "entryCount": 1,
+    "description": "Curated Japanese dictionary subset for ingrain MVP"
+  },
+  "entries": [
+    {
+      "surface": "猫",
+      "reading": "ねこ",
+      "pos": "noun",
+      "meaning": "cat (animal)",
+      "examples": [
+        {
+          "japanese": "猫が好きです。",
+          "english": "I like cats."
+        }
+      ]
+    }
+  ]
+}
