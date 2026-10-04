@@ -4,15 +4,21 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ingrain/core/providers.dart';
 import 'package:ingrain/features/auth/presentation/viewmodel/auth_view_model.dart';
 import 'package:ingrain/features/content/data/local_content_repository.dart';
+import 'package:ingrain/features/content/data/youtube_transcript_fetcher.dart';
 import 'package:ingrain/features/content/data/youtube_url_parser.dart';
 import 'package:ingrain/features/content/domain/content_item.dart';
 import 'package:ingrain/features/content/domain/content_repository.dart';
 import 'package:ingrain/features/content/domain/transcript_sentence.dart';
+import 'package:ingrain/features/content/data/transcript_parser.dart';
 
 final contentRepositoryProvider = Provider<ContentRepository>((ref) {
   final store = ref.watch(localDocumentStoreProvider);
   final authRepo = ref.watch(authRepositoryProvider);
   return LocalContentRepository(store, authRepo);
+});
+
+final youtubeTranscriptFetcherProvider = Provider<YoutubeTranscriptFetcher>((ref) {
+  return YoutubeTranscriptFetcher();
 });
 
 class ContentViewModel extends AsyncNotifier<List<ContentItem>> {
@@ -38,6 +44,36 @@ class ContentViewModel extends AsyncNotifier<List<ContentItem>> {
       final item = await _repository.create(sourceUrl: sourceUrl, title: title);
       await refresh();
       return item;
+    } catch (e, st) {
+      state = AsyncError(e, st);
+      return null;
+    }
+  }
+
+  Future<ContentItem?> addContentWithTranscript({
+    required String sourceUrl,
+    required String title,
+    required int durationSeconds,
+    required String transcriptText,
+  }) async {
+    try {
+      YoutubeUrlParser.parse(sourceUrl);
+      final item = await _repository.create(
+        sourceUrl: sourceUrl,
+        title: title,
+      );
+      final updatedItem = item.copyWith(durationSeconds: durationSeconds);
+      await _repository.save(updatedItem);
+
+      final sentences = TranscriptParser.parse(
+        transcriptText,
+        durationSeconds: durationSeconds,
+        format: TranscriptFormat.srt,
+      );
+      await _repository.saveTranscript(item.id, sentences);
+
+      await refresh();
+      return updatedItem;
     } catch (e, st) {
       state = AsyncError(e, st);
       return null;

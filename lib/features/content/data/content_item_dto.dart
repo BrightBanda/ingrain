@@ -13,18 +13,20 @@ class ContentItemDto {
     int lastPositionSeconds = 0,
     int totalImmersionSeconds = 0,
     DateTime? lastOpenedAt,
+    int? durationSeconds,
   }) : map = {
-         'id': id,
-         'sourceType': sourceType.name,
-         'sourceUrl': sourceUrl,
-         'title': title,
-         'channelTitle': channelTitle,
-         'thumbnailUrl': thumbnailUrl,
-         'lastPositionSeconds': lastPositionSeconds,
-         'totalImmersionSeconds': totalImmersionSeconds,
-         if (lastOpenedAt != null)
-           'lastOpenedAt': lastOpenedAt.toIso8601String(),
-       };
+          'id': id,
+          'sourceType': sourceType.name,
+          'sourceUrl': sourceUrl,
+          'title': title,
+          'channelTitle': channelTitle,
+          'thumbnailUrl': thumbnailUrl,
+          'lastPositionSeconds': lastPositionSeconds,
+          'totalImmersionSeconds': totalImmersionSeconds,
+          if (lastOpenedAt != null)
+            'lastOpenedAt': lastOpenedAt.toIso8601String(),
+          if (durationSeconds != null) 'durationSeconds': durationSeconds,
+        };
 
   ContentItemDto.fromMap(Map<String, dynamic> data) : map = Map.from(data);
 
@@ -46,6 +48,7 @@ class ContentItemDto {
         final str = map['lastOpenedAt'] as String?;
         return str != null ? DateTime.parse(str) : DateTime.now();
       }(),
+      durationSeconds: (map['durationSeconds'] as num?)?.toInt(),
     );
   }
 }

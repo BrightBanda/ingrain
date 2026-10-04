@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:ingrain/app/theme/app_colors.dart';
 import 'package:ingrain/features/content/data/transcript_parser.dart';
 import 'package:ingrain/features/content/domain/transcript_sentence.dart';
@@ -7,8 +8,15 @@ import 'package:ingrain/features/content/presentation/viewmodel/content_view_mod
 
 class TranscriptEditorView extends ConsumerStatefulWidget {
   final String contentId;
+  final String? initialTranscript;
+  final int? initialDuration;
 
-  const TranscriptEditorView({super.key, required this.contentId});
+  const TranscriptEditorView({
+    super.key,
+    required this.contentId,
+    this.initialTranscript,
+    this.initialDuration,
+  });
 
   @override
   ConsumerState<TranscriptEditorView> createState() =>
@@ -20,11 +28,37 @@ class _TranscriptEditorViewState extends ConsumerState<TranscriptEditorView> {
   final _durationController = TextEditingController(text: '0');
   List<TranscriptSentence> _preview = [];
   String _parseError = '';
+  bool _hasAutoFetched = false;
 
   @override
   void initState() {
     super.initState();
     _loadExisting();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _applyInitialValues();
+  }
+
+  void _applyInitialValues() {
+    if (_hasAutoFetched) return;
+    _hasAutoFetched = true;
+
+    if (widget.initialTranscript != null && widget.initialTranscript!.isNotEmpty) {
+      _textController.text = widget.initialTranscript!;
+    }
+    if (widget.initialDuration != null && widget.initialDuration! > 0) {
+      _durationController.text = widget.initialDuration.toString();
+    }
+    // Auto-parse if we have both transcript and duration
+    if (widget.initialTranscript != null &&
+        widget.initialTranscript!.isNotEmpty &&
+        widget.initialDuration != null &&
+        widget.initialDuration! > 0) {
+      _parse();
+    }
   }
 
   Future<void> _loadExisting() async {
@@ -34,7 +68,11 @@ class _TranscriptEditorViewState extends ConsumerState<TranscriptEditorView> {
     if (sentences.isNotEmpty) {
       _textController.text = _sentencesToText(sentences);
     }
-    setState(() => _preview = sentences);
+    if (mounted) {
+      setState(() {
+        _preview = sentences;
+      });
+    }
   }
 
   void _parse() {
@@ -84,6 +122,8 @@ class _TranscriptEditorViewState extends ConsumerState<TranscriptEditorView> {
     if (!mounted) return;
     ScaffoldMessenger.of(context)
         .showSnackBar(const SnackBar(content: Text('Transcript saved')));
+    if (!mounted) return;
+    context.go('/immerse');
   }
 
   @override
@@ -135,6 +175,28 @@ class _TranscriptEditorViewState extends ConsumerState<TranscriptEditorView> {
               ],
             ),
           ),
+          if (widget.initialTranscript != null &&
+              widget.initialTranscript!.isNotEmpty &&
+              widget.initialDuration != null &&
+              widget.initialDuration! > 0)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              color: AppColors.primaryPale,
+              child: Row(
+                children: [
+                  Icon(Icons.auto_awesome, size: 16, color: AppColors.primaryMain),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Transcript auto-fetched from YouTube',
+                    style: TextStyle(
+                      color: AppColors.primaryMain,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           Expanded(
             child: Row(
               children: [

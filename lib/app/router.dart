@@ -16,7 +16,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authViewModelProvider);
 
   return GoRouter(
-    initialLocation: '/',
+    initialLocation: '/onboarding',
     redirect: (context, state) {
       if (authState.isLoading) return null;
       final isOnboarded = authState.isOnboarded;
@@ -70,8 +70,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/content/:id/transcript',
-        builder: (context, state) =>
-            TranscriptEditorView(contentId: state.pathParameters['id']!),
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>?;
+          return TranscriptEditorView(
+            contentId: state.pathParameters['id']!,
+            initialTranscript: extra?['transcript'] as String?,
+            initialDuration: extra?['duration'] as int?,
+          );
+        },
       ),
       GoRoute(
         path: '/content/:id',

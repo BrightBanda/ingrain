@@ -10,6 +10,7 @@ class ContentItem {
   final int lastPositionSeconds;
   final int totalImmersionSeconds;
   final DateTime lastOpenedAt;
+  final int? durationSeconds;
 
   const ContentItem({
     required this.id,
@@ -21,6 +22,7 @@ class ContentItem {
     this.lastPositionSeconds = 0,
     this.totalImmersionSeconds = 0,
     required this.lastOpenedAt,
+    this.durationSeconds,
   });
 
   ContentItem copyWith({
@@ -33,6 +35,7 @@ class ContentItem {
     int? lastPositionSeconds,
     int? totalImmersionSeconds,
     DateTime? lastOpenedAt,
+    int? durationSeconds,
   }) {
     return ContentItem(
       id: id ?? this.id,
@@ -45,6 +48,7 @@ class ContentItem {
       totalImmersionSeconds:
           totalImmersionSeconds ?? this.totalImmersionSeconds,
       lastOpenedAt: lastOpenedAt ?? this.lastOpenedAt,
+      durationSeconds: durationSeconds ?? this.durationSeconds,
     );
   }
 }

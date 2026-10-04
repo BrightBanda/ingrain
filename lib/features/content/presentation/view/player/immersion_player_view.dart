@@ -68,6 +68,13 @@ class _ImmersionPlayerViewState extends ConsumerState<ImmersionPlayerView> {
           .read(immersionSessionViewModelProvider(widget.contentId).notifier)
           .updatePosition(state.position.inSeconds);
     });
+
+    // Set controller in provider after first frame to avoid build-phase modification
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        ref.read(playerControllerProvider.notifier).setController(_controller);
+      }
+    });
   }
 
   @override
@@ -106,8 +113,12 @@ class _ImmersionPlayerViewState extends ConsumerState<ImmersionPlayerView> {
       immersionSessionViewModelProvider(widget.contentId).notifier,
     );
 
-    _loadVideoIfNeeded(contentAsync);
-    ref.read(playerControllerProvider.notifier).setController(_controller);
+    // Load video in post-frame callback to avoid modifying state during build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _loadVideoIfNeeded(contentAsync);
+      }
+    });
 
     return Scaffold(
       appBar: AppBar(

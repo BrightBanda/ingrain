@@ -32,13 +32,17 @@ class _OnboardingViewState extends ConsumerState<OnboardingView> {
     final authVm = ref.read(authViewModelProvider.notifier);
     await authVm.completeOnboarding(displayName: name);
 
-    final settingsVm = ref.read(settingsViewModelProvider.notifier);
-    final current = ref.read(settingsViewModelProvider).settings;
-    if (current != null) {
-      await settingsVm.update(current.copyWith(dailyGoalMinutes: goal));
-    } else {
-      await settingsVm.update(AppSettings(dailyGoalMinutes: goal));
-    }
+    if (!mounted) return;
+    await Future.microtask(() async {
+      if (!mounted) return;
+      final settingsVm = ref.read(settingsViewModelProvider.notifier);
+      final current = ref.read(settingsViewModelProvider).settings;
+      if (current != null) {
+        await settingsVm.update(current.copyWith(dailyGoalMinutes: goal));
+      } else {
+        await settingsVm.update(AppSettings(dailyGoalMinutes: goal));
+      }
+    });
   }
 
   @override
