@@ -20,6 +20,8 @@ class ProgressSummary {
   final int longestStreak;
   final int totalSentences;
   final int sentencesThisWeek;
+  final int totalWords;
+  final int wordsLearningOrBetter;
   final int dueCount;
   final int reviewedToday;
   final int totalReviews;
@@ -34,6 +36,8 @@ class ProgressSummary {
     required this.longestStreak,
     required this.totalSentences,
     required this.sentencesThisWeek,
+    this.totalWords = 0,
+    this.wordsLearningOrBetter = 0,
     required this.dueCount,
     required this.reviewedToday,
     required this.totalReviews,
@@ -65,5 +69,8 @@ class ProgressSummary {
   }
 
   bool get isEmpty =>
-      lifetimeSeconds == 0 && totalSentences == 0 && totalReviews == 0;
+      lifetimeSeconds == 0 &&
+      totalSentences == 0 &&
+      totalWords == 0 &&
+      totalReviews == 0;
 }

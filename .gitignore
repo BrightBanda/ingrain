@@ -33,6 +33,9 @@ migrate_working_dir/
 /build/
 /coverage/
 
+# Downloaded source snapshots for tool/build_dictionary.py
+/.cache/
+
 # Symbolication related
 app.*.symbols
 

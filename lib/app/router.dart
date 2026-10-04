@@ -11,6 +11,7 @@ import 'package:ingrain/features/immersion/presentation/view/immersion_home_view
 import 'package:ingrain/features/progress/presentation/view/progress_tab_view.dart';
 import 'package:ingrain/features/sentence_mining/presentation/view/sentence_mining_view.dart';
 import 'package:ingrain/features/settings/presentation/view/settings_view.dart';
+import 'package:ingrain/features/vocabulary/presentation/view/vocabulary_view.dart';
 import 'package:ingrain/features/srs/presentation/view/review_tab_view.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
@@ -72,6 +73,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/sentences',
         builder: (context, state) => const SentenceMiningView(),
+      ),
+      GoRoute(
+        path: '/vocabulary',
+        builder: (context, state) => const VocabularyView(),
       ),
       GoRoute(
         path: '/content/:id/transcript',

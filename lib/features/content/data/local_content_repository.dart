@@ -4,6 +4,7 @@ import 'package:ingrain/features/content/data/content_item_dto.dart';
 import 'package:ingrain/features/content/domain/content_item.dart';
 import 'package:ingrain/features/content/domain/content_repository.dart';
 import 'package:ingrain/features/content/domain/transcript_sentence.dart';
+import 'package:ingrain/features/content/data/youtube_url_parser.dart';
 
 class LocalContentRepository implements ContentRepository {
   final LocalDocumentStore _store;
@@ -133,8 +134,8 @@ class LocalContentRepository implements ContentRepository {
   }
 
   static String _extractVideoId(String url) {
-    final match = RegExp(r'([a-zA-Z0-9_-]{11})').firstMatch(url);
-    if (match != null) return match.group(1)!;
+    final parsed = YoutubeUrlParser.tryParse(url);
+    if (parsed != null) return parsed;
     return _generateId();
   }
 

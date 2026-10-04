@@ -20,6 +20,12 @@ import 'package:ingrain/features/srs/domain/review_event.dart';
 import 'package:ingrain/features/srs/domain/review_repository.dart';
 import 'package:ingrain/features/srs/presentation/view/review_tab_view.dart';
 import 'package:ingrain/features/srs/presentation/viewmodel/review_view_model.dart';
+import 'package:ingrain/features/vocabulary/domain/dictionary_index.dart';
+import 'package:ingrain/features/vocabulary/domain/vocabulary_item.dart';
+import 'package:ingrain/features/vocabulary/domain/vocabulary_repository.dart';
+import 'package:ingrain/features/vocabulary/presentation/view/vocabulary_view.dart';
+import 'package:ingrain/features/vocabulary/presentation/widgets/tappable_transcript_text.dart';
+import 'package:ingrain/features/vocabulary/presentation/viewmodel/vocabulary_view_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class FixedTestClock extends Clock {
@@ -184,6 +190,112 @@ class InMemoryReviewRepository implements ReviewRepository {
   }
 }
 
+class InMemoryVocabularyRepository implements VocabularyRepository {
+  InMemoryVocabularyRepository([List<VocabularyItem>? seed])
+    : words = [...?seed];
+
+  final List<VocabularyItem> words;
+  int _nextId = 0;
+
+  @override
+  Future<VocabularyItem> save({
+    required String word,
+    String? reading,
+    String? meaning,
+    String? pos,
+    required SourceType sourceType,
+    required String sourceId,
+    String? sourceTitle,
+    int? timestampSeconds,
+    String? contextSentence,
+    String? sessionId,
+    VocabState state = VocabState.encountered,
+    DateTime? createdAt,
+  }) async {
+    final now = createdAt ?? DateTime(2026, 3, 15);
+    final item = VocabularyItem(
+      id: 'word-${_nextId++}',
+      uid: 'uid-1',
+      word: word,
+      reading: reading,
+      meaning: meaning,
+      pos: pos,
+      sourceType: sourceType,
+      sourceId: sourceId,
+      sourceTitle: sourceTitle,
+      timestampSeconds: timestampSeconds,
+      contextSentence: contextSentence,
+      sessionId: sessionId,
+      state: state,
+      createdAt: now,
+      updatedAt: now,
+    );
+    words.add(item);
+    return item;
+  }
+
+  @override
+  Future<VocabularyItem?> get(String id) async {
+    for (final word in words) {
+      if (word.id == id) return word;
+    }
+    return null;
+  }
+
+  @override
+  Future<void> update(VocabularyItem item) async {
+    final index = words.indexWhere((w) => w.id == item.id);
+    if (index != -1) words[index] = item;
+  }
+
+  @override
+  Future<void> delete(String id) async {
+    words.removeWhere((w) => w.id == id);
+  }
+
+  @override
+  Stream<List<VocabularyItem>> watchAll() async* {
+    final sorted = [...words]
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    yield sorted;
+  }
+
+  @override
+  Future<VocabularyItem?> findByWord(String word) async {
+    for (final item in words) {
+      if (item.word == word) return item;
+    }
+    return null;
+  }
+
+  @override
+  Future<VocabularyItem?> recordEncounter(
+    String id, {
+    DateTime? encounteredAt,
+  }) async {
+    final existing = await get(id);
+    if (existing == null) return null;
+    final updated = existing.copyWith(
+      encounterCount: existing.encounterCount + 1,
+      updatedAt: encounteredAt ?? DateTime(2026, 3, 15),
+    );
+    await update(updated);
+    return updated;
+  }
+
+  @override
+  Future<int> count() async => words.length;
+
+  @override
+  Future<Map<VocabState, int>> countByState() async {
+    final counts = {for (final state in VocabState.values) state: 0};
+    for (final word in words) {
+      counts[word.state] = counts[word.state]! + 1;
+    }
+    return counts;
+  }
+}
+
 class EmptyImmersionRepository implements ImmersionRepository {
   const EmptyImmersionRepository();
 
@@ -237,6 +349,51 @@ SentenceItem sampleSentence() => SentenceItem(
   createdAt: DateTime(2026, 3, 15, 9),
 );
 
+VocabularyItem sampleWord({
+  VocabState state = VocabState.learning,
+  String text = '猫',
+  String? reading = 'ねこ',
+}) {
+  return VocabularyItem(
+    id: 'word-$text',
+    uid: 'uid-1',
+    word: text,
+    reading: reading,
+    meaning: 'cat (animal)',
+    pos: 'noun',
+    sourceType: SourceType.youtube,
+    sourceId: 'content-1',
+    sourceTitle: 'My Video',
+    timestampSeconds: 42,
+    contextSentence: '猫が好きです。',
+    state: state,
+    createdAt: DateTime(2026, 3, 15, 9),
+    updatedAt: DateTime(2026, 3, 15, 9),
+  );
+}
+
+/// One word per line so each tap target can be hit precisely.
+List<TranscriptSentence> lookupTranscript() => const [
+  TranscriptSentence(index: 0, text: '猫', startSeconds: 0, endSeconds: 5),
+  TranscriptSentence(index: 1, text: '犬', startSeconds: 5, endSeconds: 12),
+];
+
+DictionaryIndex testDictionary() => DictionaryIndex.fromJson({
+  'entries': [
+    {
+      'surface': '猫',
+      'reading': 'ねこ',
+      'pos': 'noun',
+      'meanings': ['cat (animal)', 'feline'],
+    },
+    {
+      'surface': '好き',
+      'reading': 'すき',
+      'meanings': ['liking'],
+    },
+  ],
+});
+
 ContentItem sampleContent() => ContentItem(
   id: 'content-1',
   sourceType: SourceType.youtube,
@@ -273,6 +430,7 @@ void main() {
     Widget child, {
     List<SentenceItem> sentences = const [],
     List<ReviewCard> cards = const [],
+    List<VocabularyItem> words = const [],
   }) async {
     SharedPreferences.setMockInitialValues({});
     final prefs = await SharedPreferences.getInstance();
@@ -288,6 +446,10 @@ void main() {
         reviewRepositoryProvider.overrideWithValue(
           InMemoryReviewRepository([...cards]),
         ),
+        vocabularyRepositoryProvider.overrideWithValue(
+          InMemoryVocabularyRepository([...words]),
+        ),
+        dictionaryProvider.overrideWith((ref) async => testDictionary()),
         immersionRepositoryProvider.overrideWithValue(
           const EmptyImmersionRepository(),
         ),
@@ -510,6 +672,204 @@ void main() {
       await scrollDashboardDown(tester);
       expect(find.text('Review 1 due now'), findsOneWidget);
       expect(find.text('Browse mined sentences'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('counts saved vocabulary', (tester) async {
+      await pumpScreen(
+        tester,
+        const ProgressTabView(),
+        words: [
+          sampleWord(),
+          sampleWord(state: VocabState.encountered),
+        ],
+      );
+
+      expect(find.text('Words saved'), findsOneWidget);
+
+      await scrollDashboardDown(tester);
+      expect(find.text('Browse saved vocabulary'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+  });
+
+  group('VocabularyView', () {
+    testWidgets('shows the empty state with no saved words', (tester) async {
+      await pumpScreen(tester, const VocabularyView());
+
+      expect(find.text('Vocabulary'), findsOneWidget);
+      expect(find.text('No saved words yet'), findsOneWidget);
+      expect(find.text('Add'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('lists a word with its reading, meaning and source', (
+      tester,
+    ) async {
+      await pumpScreen(tester, const VocabularyView(), words: [sampleWord()]);
+
+      expect(find.text('猫 (ねこ)'), findsOneWidget);
+      expect(find.text('cat (animal)'), findsOneWidget);
+      expect(find.text('My Video • 0:42'), findsOneWidget);
+      expect(find.text('No saved words yet'), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('filters the list by learning state', (tester) async {
+      await pumpScreen(
+        tester,
+        const VocabularyView(),
+        words: [
+          sampleWord(state: VocabState.learning),
+          sampleWord(state: VocabState.encountered, text: '犬', reading: 'いぬ'),
+        ],
+      );
+
+      await tester.tap(find.widgetWithText(FilterChip, 'Learning 1'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('猫 (ねこ)'), findsOneWidget);
+
+      await tester.tap(find.widgetWithText(FilterChip, 'Encountered 1'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('犬 (いぬ)'), findsOneWidget);
+      expect(find.text('猫 (ねこ)'), findsNothing);
+
+      await tester.tap(find.widgetWithText(FilterChip, 'Known 0'));
+      await tester.pumpAndSettle();
+      expect(find.text('No words in this state'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+  });
+
+  group('TranscriptView word lookup', () {
+    Future<ProviderContainer> pumpTranscript(WidgetTester tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      final container = ProviderContainer(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          clockProvider.overrideWithValue(FixedTestClock()),
+          vocabularyRepositoryProvider.overrideWithValue(
+            InMemoryVocabularyRepository(),
+          ),
+          reviewRepositoryProvider.overrideWithValue(
+            InMemoryReviewRepository(),
+          ),
+          immersionRepositoryProvider.overrideWithValue(
+            const EmptyImmersionRepository(),
+          ),
+          dictionaryProvider.overrideWith((ref) async => testDictionary()),
+          transcriptProvider('content-1')
+              .overrideWith((ref) async => lookupTranscript()),
+          contentItemProvider('content-1')
+              .overrideWith((ref) async => sampleContent()),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(
+            home: Scaffold(body: TranscriptView(contentId: 'content-1')),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      return container;
+    }
+
+    /// Tokenised text renders as [RichText], so the tap is aimed at the start
+    /// of the glyph rather than matched by string. Each line of
+    /// [lookupTranscript] holds a single word.
+    Future<void> tapWord(WidgetTester tester, int line) async {
+      final text = find
+          .descendant(
+            of: find.byType(TappableTranscriptText),
+            matching: find.byType(RichText),
+          )
+          .at(line);
+      final box = tester.renderObject<RenderBox>(text);
+      await tester.tapAt(box.localToGlobal(Offset(6, box.size.height / 2)));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('tapping a word shows the dictionary entry', (tester) async {
+      await pumpTranscript(tester);
+
+      await tapWord(tester, 0);
+
+      expect(find.text('猫'), findsWidgets);
+      expect(find.text('ねこ'), findsOneWidget);
+      expect(find.text('noun'), findsOneWidget);
+      expect(find.text('cat (animal)'), findsOneWidget);
+      expect(find.text('feline'), findsOneWidget);
+      expect(find.text('Save word'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('saving from the lookup sheet stores the word and a card', (
+      tester,
+    ) async {
+      final container = await pumpTranscript(tester);
+
+      await tapWord(tester, 0);
+      await tester.tap(find.text('Save word'));
+      await tester.pumpAndSettle();
+
+      // The pre-filled save form opens with the dictionary values.
+      expect(find.text('猫'), findsWidgets);
+      await tester.tap(find.text('Save word').last);
+      await tester.pumpAndSettle();
+
+      final repository = container.read(vocabularyRepositoryProvider);
+      expect(await repository.count(), 1);
+      final saved = (await repository.findByWord('猫'))!;
+      expect(saved.reading, 'ねこ');
+      expect(saved.meaning, 'cat (animal)');
+      expect(saved.sourceId, 'content-1');
+      expect(saved.sourceTitle, 'My Video');
+      expect(saved.contextSentence, '猫 犬');
+
+      expect(find.text('Word saved for review'), findsOneWidget);
+
+      // Let the confirmation snack bar dismiss so no timer outlives the test.
+      await tester.pump(const Duration(seconds: 5));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('a word missing from the dictionary can still be saved', (
+      tester,
+    ) async {
+      final container = await pumpTranscript(tester);
+
+      // 犬 is not in the stub dictionary but must still be tappable.
+      await tapWord(tester, 1);
+
+      expect(
+        find.textContaining('Not in the bundled dictionary'),
+        findsOneWidget,
+      );
+      await tester.tap(find.text('Save word'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Meaning'),
+        'dog (animal)',
+      );
+      await tester.tap(find.text('Save word').last);
+      await tester.pumpAndSettle();
+
+      final saved = (await container
+          .read(vocabularyRepositoryProvider)
+          .findByWord('犬'))!;
+      expect(saved.meaning, 'dog (animal)');
+
+      await tester.pump(const Duration(seconds: 5));
+      await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
     });
   });

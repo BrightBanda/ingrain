@@ -62,6 +62,12 @@ class ProgressTabView extends ConsumerWidget {
           ],
           const SizedBox(height: 16),
           OutlinedButton.icon(
+            onPressed: () => context.go('/vocabulary'),
+            icon: const Icon(Icons.translate),
+            label: const Text('Browse saved vocabulary'),
+          ),
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
             onPressed: () => context.go('/sentences'),
             icon: const Icon(Icons.bookmark_border),
             label: const Text('Browse mined sentences'),
@@ -365,6 +371,13 @@ class _LearningCard extends StatelessWidget {
               label: 'Sentences mined',
               value: '${summary.totalSentences}',
               caption: '${summary.sentencesThisWeek} this week',
+            ),
+            const Divider(height: 20),
+            _LearningRow(
+              icon: Icons.translate,
+              label: 'Words saved',
+              value: '${summary.totalWords}',
+              caption: '${summary.wordsLearningOrBetter} learning or better',
             ),
             const Divider(height: 20),
             _LearningRow(

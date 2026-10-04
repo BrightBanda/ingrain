@@ -5,6 +5,7 @@ import 'package:ingrain/features/progress/domain/progress_calculator.dart';
 import 'package:ingrain/features/progress/domain/progress_summary.dart';
 import 'package:ingrain/features/sentence_mining/domain/sentence_item.dart';
 import 'package:ingrain/features/srs/domain/review_card.dart';
+import 'package:ingrain/features/vocabulary/domain/vocabulary_item.dart';
 import 'package:ingrain/features/srs/domain/review_event.dart';
 
 void main() {
@@ -64,9 +65,26 @@ void main() {
     );
   }
 
+  VocabularyItem word({
+    required String text,
+    VocabState state = VocabState.encountered,
+  }) {
+    return VocabularyItem(
+      id: 'word-$text',
+      uid: 'uid-1',
+      word: text,
+      sourceType: SourceType.manual,
+      sourceId: 'manual',
+      state: state,
+      createdAt: DateTime(2026, 3, 15, 9),
+      updatedAt: DateTime(2026, 3, 15, 9),
+    );
+  }
+
   ProgressSummary summarize({
     List<ImmersionSession>? sessions,
     List<SentenceItem>? sentences,
+    List<VocabularyItem>? vocabulary,
     List<ReviewCard>? dueCards,
     List<ReviewEvent>? reviewEvents,
     DateTime? reference,
@@ -75,6 +93,7 @@ void main() {
     return calculator.summarize(
       sessions: sessions ?? const <ImmersionSession>[],
       sentences: sentences ?? const <SentenceItem>[],
+      vocabulary: vocabulary ?? const <VocabularyItem>[],
       dueCards: dueCards ?? const <ReviewCard>[],
       reviewEvents: reviewEvents ?? const <ReviewEvent>[],
       today: reference ?? today,
@@ -96,6 +115,8 @@ void main() {
       expect(summary.dueCount, 0);
       expect(summary.reviewedToday, 0);
       expect(summary.totalReviews, 0);
+      expect(summary.totalWords, 0);
+      expect(summary.wordsLearningOrBetter, 0);
       expect(summary.isEmpty, isTrue);
     });
 
@@ -287,6 +308,30 @@ void main() {
       final summary = summarize(sentences: [shared, shared]);
 
       expect(summary.totalSentences, 2);
+    });
+  });
+
+  group('ProgressCalculator vocabulary', () {
+    test('counts every saved word and only the learned ones', () {
+      final summary = summarize(
+        vocabulary: [
+          word(text: '猫', state: VocabState.mastered),
+          word(text: '犬', state: VocabState.learning),
+          word(text: '鳥', state: VocabState.known),
+          word(text: '魚', state: VocabState.encountered),
+          word(text: '肉', state: VocabState.unknown),
+        ],
+      );
+
+      expect(summary.totalWords, 5);
+      expect(summary.wordsLearningOrBetter, 3);
+    });
+
+    test('saved words alone keep the dashboard out of the empty state', () {
+      final summary = summarize(vocabulary: [word(text: '猫')]);
+
+      expect(summary.totalWords, 1);
+      expect(summary.isEmpty, isFalse);
     });
   });
 

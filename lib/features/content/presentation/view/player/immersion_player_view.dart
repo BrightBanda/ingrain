@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:youtube_player_iframe/youtube_player_iframe.dart';
 import 'package:ingrain/app/theme/app_colors.dart';
 import 'package:ingrain/core/utils/duration_format.dart';
+import 'package:ingrain/features/content/data/youtube_url_parser.dart';
 import 'package:ingrain/features/content/domain/content_item.dart';
 import 'package:ingrain/features/content/presentation/viewmodel/content_view_model.dart';
 import 'package:ingrain/features/content/presentation/view/player/transcript_view.dart';
@@ -49,6 +52,8 @@ class ImmersionPlayerView extends ConsumerStatefulWidget {
 
 class _ImmersionPlayerViewState extends ConsumerState<ImmersionPlayerView> {
   late YoutubePlayerController _controller;
+  StreamSubscription<YoutubeVideoState>? _videoStateSubscription;
+  StreamSubscription<YoutubePlayerValue>? _playerStreamSubscription;
   bool _videoLoadStarted = false;
   bool _videoReady = false;
   String? _videoId;
@@ -58,18 +63,50 @@ class _ImmersionPlayerViewState extends ConsumerState<ImmersionPlayerView> {
   void initState() {
     super.initState();
     _controller = YoutubePlayerController(
-      params: YoutubePlayerParams(
+      params: const YoutubePlayerParams(
         showFullscreenButton: true,
         enableKeyboard: false,
         showControls: true,
+        origin: 'https://www.youtube-nocookie.com',
+        strictRelatedVideos: true,
       ),
+      onWebResourceError: (error) {
+        if (!mounted) return;
+        setState(() {
+          _playerError = 'Network error: ${error.description}';
+          _videoReady = false;
+          _videoLoadStarted = false;
+        });
+      },
     );
 
-    _controller.videoStateStream.listen((state) {
+    _videoStateSubscription = _controller.videoStateStream.listen((state) {
       ref.read(playbackPositionProvider.notifier).setPosition(state.position);
       ref
           .read(immersionSessionViewModelProvider(widget.contentId).notifier)
           .updatePosition(state.position.inSeconds);
+    });
+
+    _playerStreamSubscription = _controller.stream.listen((value) {
+      if (!mounted) return;
+      if (value.error != YoutubeError.none &&
+          value.error != YoutubeError.unknown) {
+        setState(() {
+          _playerError = _mapYoutubeError(value.error);
+          _videoReady = false;
+          _videoLoadStarted = false;
+        });
+      } else if (value.playerState == PlayerState.playing ||
+          value.playerState == PlayerState.paused ||
+          value.playerState == PlayerState.buffering ||
+          value.playerState == PlayerState.cued) {
+        if (!_videoReady) {
+          setState(() {
+            _videoReady = true;
+            _playerError = null;
+          });
+        }
+      }
     });
 
     // Set controller in provider after first frame to avoid build-phase modification
@@ -80,8 +117,26 @@ class _ImmersionPlayerViewState extends ConsumerState<ImmersionPlayerView> {
     });
   }
 
+  String _mapYoutubeError(YoutubeError error) {
+    return switch (error) {
+      YoutubeError.invalidParam => 'Invalid video ID or parameter.',
+      YoutubeError.html5Error => 'HTML5 player error. Please try again.',
+      YoutubeError.videoNotFound =>
+        'This video could not be found or is private.',
+      YoutubeError.notEmbeddable ||
+      YoutubeError.sameAsNotEmbeddable ||
+      YoutubeError.sameAsNotEmbeddable2 =>
+        'The owner does not allow this video to be played in embedded players.',
+      YoutubeError.cannotFindVideo => 'Could not find the requested video.',
+      YoutubeError.none => '',
+      YoutubeError.unknown => 'An error occurred while loading this video.',
+    };
+  }
+
   @override
   void dispose() {
+    _videoStateSubscription?.cancel();
+    _playerStreamSubscription?.cancel();
     _controller.close();
     ref.read(playerControllerProvider.notifier).setController(null);
     super.dispose();
@@ -92,7 +147,14 @@ class _ImmersionPlayerViewState extends ConsumerState<ImmersionPlayerView> {
     if (content == null || _videoLoadStarted) return;
     if (content.sourceType != SourceType.youtube) return;
 
-    _videoId = content.id;
+    // Self-healing: if content.id was previously saved as a raw tracking param
+    // or invalid id, re-extract the real video ID from the source URL.
+    final resolvedId =
+        YoutubeUrlParser.tryParse(content.sourceUrl) ??
+        YoutubeUrlParser.tryParse(content.id) ??
+        content.id;
+
+    _videoId = resolvedId;
     _videoLoadStarted = true;
     setState(() {
       _playerError = null;
@@ -100,14 +162,16 @@ class _ImmersionPlayerViewState extends ConsumerState<ImmersionPlayerView> {
     });
 
     try {
-      await _controller.loadVideoById(videoId: content.id);
+      await _controller.loadVideoById(videoId: resolvedId);
     } catch (_) {
       // The bridge waits for the iframe API itself, but it can still time out
-      // or fail. Without this the rejection was unhandled and the player just
-      // stayed black with no explanation.
+      // or fail on weak mobile connections.
       _videoLoadStarted = false;
       if (!mounted) return;
-      setState(() => _playerError = 'Could not load this video.');
+      setState(
+        () => _playerError =
+            'Could not load this video. Please check your connection.',
+      );
       return;
     }
 
@@ -122,11 +186,13 @@ class _ImmersionPlayerViewState extends ConsumerState<ImmersionPlayerView> {
     setState(() {
       _playerError = null;
       _videoReady = false;
+      _videoLoadStarted = true;
     });
 
     try {
       await _controller.loadVideoById(videoId: videoId);
     } catch (_) {
+      _videoLoadStarted = false;
       if (!mounted) return;
       setState(
         () => _playerError = 'Could not load this video. Please try again.',

@@ -9,6 +9,11 @@ import 'package:ingrain/features/immersion/presentation/viewmodel/immersion_sess
 import 'package:ingrain/features/sentence_mining/presentation/view/sentence_save_sheet.dart';
 import 'package:ingrain/features/sentence_mining/presentation/viewmodel/sentence_mining_view_model.dart';
 import 'package:ingrain/features/srs/presentation/viewmodel/review_view_model.dart';
+import 'package:ingrain/features/vocabulary/domain/dictionary_index.dart';
+import 'package:ingrain/features/vocabulary/presentation/view/vocabulary_lookup_sheet.dart';
+import 'package:ingrain/features/vocabulary/presentation/view/vocabulary_save_sheet.dart';
+import 'package:ingrain/features/vocabulary/presentation/viewmodel/vocabulary_view_model.dart';
+import 'package:ingrain/features/vocabulary/presentation/widgets/tappable_transcript_text.dart';
 
 class TranscriptView extends ConsumerWidget {
   final String? contentId;
@@ -19,6 +24,7 @@ class TranscriptView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final position = ref.watch(playbackPositionProvider);
     final controller = ref.watch(playerControllerProvider);
+    final tokenizer = ref.watch(transcriptTokenizerProvider);
 
     if (contentId == null) {
       return const Center(child: Text('No content selected'));
@@ -71,8 +77,11 @@ class TranscriptView extends ConsumerWidget {
                       ),
                     ),
                     Expanded(
-                      child: Text(
-                        sentence.text,
+                      child: TappableTranscriptText(
+                        tokens: tokenizer.tokenize(sentence.text),
+                        highlightColor: isCurrent
+                            ? AppColors.primaryDark
+                            : AppColors.textPrimary,
                         style: TextStyle(
                           color: isCurrent
                               ? AppColors.primaryDark
@@ -80,6 +89,13 @@ class TranscriptView extends ConsumerWidget {
                           fontWeight: isCurrent
                               ? FontWeight.bold
                               : FontWeight.normal,
+                        ),
+                        onTokenTap: (token) => _openLookupSheet(
+                          context,
+                          ref,
+                          sentences: sentences,
+                          sentence: sentence,
+                          word: token,
                         ),
                       ),
                     ),
@@ -110,6 +126,100 @@ class TranscriptView extends ConsumerWidget {
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (_, _) => const Center(child: Text('Error loading transcript')),
     );
+  }
+
+  /// Tap-to-look-up (product spec MVP #4): show the dictionary entry for the
+  /// tapped token and let the learner save it with its immersion memory.
+  Future<void> _openLookupSheet(
+    BuildContext context,
+    WidgetRef ref, {
+    required List<TranscriptSentence> sentences,
+    required TranscriptSentence sentence,
+    required String word,
+  }) async {
+    final contentId = this.contentId;
+    if (contentId == null) return;
+
+    final controller = ref.watch(playerControllerProvider);
+    // Awaited rather than read: the dictionary may still be loading, and a
+    // lookup must never answer "not in the dictionary" just because of that.
+    DictionaryIndex? dictionary;
+    try {
+      dictionary = await ref.read(dictionaryProvider.future);
+    } catch (_) {
+      dictionary = null;
+    }
+    final entry = dictionary?.lookup(word);
+    final contextLabel = SentenceMiningViewModel.contextForTranscript(
+      sentences,
+      sentence.index,
+    );
+    final saved = await ref.read(vocabularyRepositoryProvider).findByWord(word);
+    final alreadySaved = saved != null;
+    if (!context.mounted) return;
+
+    if (!context.mounted) return;
+
+    final wantsSave = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      builder: (sheetContext) => VocabularyLookupSheet(
+        word: entry?.surface ?? word,
+        entry: entry,
+        contextLabel: contextLabel,
+        alreadySaved: alreadySaved,
+        onJumpToTimestamp: controller == null
+            ? null
+            : () =>
+                  controller.seekTo(seconds: sentence.startSeconds.toDouble()),
+        onSave: () => Navigator.of(sheetContext).pop(true),
+      ),
+    );
+    if (wantsSave != true || !context.mounted) return;
+
+    final request = await showModalBottomSheet<VocabularySaveRequest>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => VocabularySaveSheet(
+        title: 'Save word',
+        word: entry?.surface ?? word,
+        reading: entry?.reading,
+        meaning: entry?.primaryMeaning,
+        pos: entry?.pos,
+        contextLabel: contextLabel,
+      ),
+    );
+    if (request == null || !context.mounted) return;
+
+    String? contentTitle;
+    try {
+      contentTitle = (await ref.read(contentItemProvider(contentId).future))
+          .title;
+    } catch (_) {
+      contentTitle = null;
+    }
+    final sessionId = ref
+        .read(immersionSessionViewModelProvider(contentId))
+        .sessionId;
+
+    await ref
+        .read(vocabularyViewModelProvider.notifier)
+        .saveFromTranscript(
+          contentId: contentId,
+          word: request.word,
+          sentence: sentence,
+          transcript: sentences,
+          contentTitle: contentTitle,
+          sessionId: sessionId,
+          reading: request.reading,
+          meaning: request.meaning,
+          pos: request.pos,
+        );
+    ref.invalidate(dueCountProvider);
+
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context)
+        .showSnackBar(const SnackBar(content: Text('Word saved for review')));
   }
 
   Future<void> _openSaveSheet(

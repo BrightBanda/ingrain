@@ -12,6 +12,8 @@ import 'package:ingrain/features/sentence_mining/presentation/viewmodel/sentence
 import 'package:ingrain/features/settings/presentation/viewmodel/settings_view_model.dart';
 import 'package:ingrain/features/srs/domain/review_repository.dart';
 import 'package:ingrain/features/srs/presentation/viewmodel/review_view_model.dart';
+import 'package:ingrain/features/vocabulary/domain/vocabulary_repository.dart';
+import 'package:ingrain/features/vocabulary/presentation/viewmodel/vocabulary_view_model.dart';
 
 class ProgressUiState {
   final bool isLoading;
@@ -37,6 +39,7 @@ class ProgressViewModel extends Notifier<ProgressUiState> {
 
   late ImmersionRepository _immersionRepository;
   late SentenceRepository _sentenceRepository;
+  late VocabularyRepository _vocabularyRepository;
   late ReviewRepository _reviewRepository;
   late Clock _clock;
 
@@ -44,6 +47,7 @@ class ProgressViewModel extends Notifier<ProgressUiState> {
   ProgressUiState build() {
     _immersionRepository = ref.watch(immersionRepositoryProvider);
     _sentenceRepository = ref.watch(sentenceRepositoryProvider);
+    _vocabularyRepository = ref.watch(vocabularyRepositoryProvider);
     _reviewRepository = ref.watch(reviewRepositoryProvider);
     _clock = ref.watch(clockProvider);
     _load();
@@ -62,12 +66,14 @@ class ProgressViewModel extends Notifier<ProgressUiState> {
       final now = _clock.now;
       final sessions = await _immersionRepository.watchRecentSessions().first;
       final sentences = await _sentenceRepository.watchAll().first;
+      final vocabulary = await _vocabularyRepository.watchAll().first;
       final dueCards = await _reviewRepository.listDue(now: now);
       final reviewEvents = await _reviewRepository.listReviewHistory();
 
       final summary = _calculator.summarize(
         sessions: sessions,
         sentences: sentences,
+        vocabulary: vocabulary,
         dueCards: dueCards,
         reviewEvents: reviewEvents,
         today: now,

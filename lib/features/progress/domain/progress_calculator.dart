@@ -3,6 +3,7 @@ import 'package:ingrain/features/progress/domain/progress_summary.dart';
 import 'package:ingrain/features/sentence_mining/domain/sentence_item.dart';
 import 'package:ingrain/features/srs/domain/review_card.dart';
 import 'package:ingrain/features/srs/domain/review_event.dart';
+import 'package:ingrain/features/vocabulary/domain/vocabulary_item.dart';
 
 /// Pure progress aggregation. Every entry point takes an explicit `today` so
 /// the results are deterministic and unit testable.
@@ -18,6 +19,7 @@ class ProgressCalculator {
   ProgressSummary summarize({
     required List<ImmersionSession> sessions,
     required List<SentenceItem> sentences,
+    required List<VocabularyItem> vocabulary,
     required List<ReviewCard> dueCards,
     required List<ReviewEvent> reviewEvents,
     required DateTime today,
@@ -81,6 +83,10 @@ class ProgressCalculator {
       longestStreak: _longestStreak(activeDays),
       totalSentences: sentences.length,
       sentencesThisWeek: sentencesThisWeek,
+      totalWords: vocabulary.length,
+      wordsLearningOrBetter: vocabulary
+          .where((word) => word.state.isAtLeast(VocabState.learning))
+          .length,
       dueCount: dueCount,
       reviewedToday: reviewedToday,
       totalReviews: reviewEvents.length,

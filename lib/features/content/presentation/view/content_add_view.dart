@@ -33,38 +33,44 @@ class _ContentAddViewState extends ConsumerState<ContentAddView> {
     final url = _urlController.text.trim();
     final title = _titleController.text.trim();
 
-    final videoId = YoutubeUrlParser.parse(url);
+    final videoId = YoutubeUrlParser.tryParse(url);
+    if (videoId == null) {
+      setState(() {
+        _fetchError = 'Invalid YouTube URL or video ID. Please check the link.';
+      });
+      return;
+    }
 
     setState(() {
       _isFetching = true;
       _fetchError = null;
     });
 
-try {
-        final fetcher = ref.read(youtubeTranscriptFetcherProvider);
-        final result = await fetcher.fetch(videoId);
+    try {
+      final fetcher = ref.read(youtubeTranscriptFetcherProvider);
+      final result = await fetcher.fetch(videoId);
 
-        if (!mounted) return;
+      if (!mounted) return;
 
-        final contentItem = await ref
-            .read(contentViewModelProvider.notifier)
-            .addContentWithTranscript(
-              sourceUrl: url,
-              title: title,
-              durationSeconds: result.durationSeconds,
-              transcriptText: result.transcriptText ?? '',
-            );
-
-        if (contentItem != null && mounted) {
-          context.go(
-            '/content/${contentItem.id}/transcript',
-            extra: {
-              'transcript': result.transcriptText ?? '',
-              'duration': result.durationSeconds,
-            },
+      final contentItem = await ref
+          .read(contentViewModelProvider.notifier)
+          .addContentWithTranscript(
+            sourceUrl: url,
+            title: title,
+            durationSeconds: result.durationSeconds,
+            transcriptText: result.transcriptText ?? '',
           );
-        }
-      } on YoutubeTranscriptException catch (e) {
+
+      if (contentItem != null && mounted) {
+        context.go(
+          '/content/${contentItem.id}/transcript',
+          extra: {
+            'transcript': result.transcriptText ?? '',
+            'duration': result.durationSeconds,
+          },
+        );
+      }
+    } on YoutubeTranscriptException catch (e) {
       // Auto-fetch failed, fall back to manual entry
       if (!mounted) return;
       setState(() {
@@ -72,10 +78,7 @@ try {
       });
       final result = await ref
           .read(contentViewModelProvider.notifier)
-          .addContent(
-            sourceUrl: url,
-            title: title,
-          );
+          .addContent(sourceUrl: url, title: title);
       if (result != null && mounted) {
         context.go('/content/${result.id}/transcript');
       }
@@ -158,7 +161,10 @@ try {
                     ),
                     child: Row(
                       children: [
-                        Icon(Icons.warning_amber_rounded, color: Colors.orange.shade700),
+                        Icon(
+                          Icons.warning_amber_rounded,
+                          color: Colors.orange.shade700,
+                        ),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
@@ -187,7 +193,9 @@ try {
                               height: 20,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  Colors.white,
+                                ),
                               ),
                             ),
                             SizedBox(width: 12),

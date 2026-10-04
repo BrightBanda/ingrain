@@ -6,12 +6,15 @@ import 'package:ingrain/features/sentence_mining/data/local_sentence_repository.
 import 'package:ingrain/features/srs/data/local_review_repository.dart';
 import 'package:ingrain/features/srs/domain/review_card.dart';
 import 'package:ingrain/features/srs/domain/srs_scheduler.dart';
+import 'package:ingrain/features/vocabulary/data/local_vocabulary_repository.dart';
+import 'package:ingrain/features/vocabulary/domain/vocabulary_item.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   late LocalDocumentStore store;
   late LocalSentenceRepository sentences;
   late LocalReviewRepository reviews;
+  late LocalVocabularyRepository vocabulary;
 
   final now = DateTime(2026, 3, 15, 12, 0);
 
@@ -22,6 +25,7 @@ void main() {
     final auth = LocalAuthRepository(store);
     sentences = LocalSentenceRepository(store, auth);
     reviews = LocalReviewRepository(store, auth);
+    vocabulary = LocalVocabularyRepository(store, auth);
   });
 
   group('LocalSentenceRepository', () {
@@ -456,5 +460,260 @@ void main() {
       expect(await sentences.count(), 0);
       expect(await reviews.countDue(now: now), 0);
     });
+  });
+
+  group('LocalVocabularyRepository', () {
+    test('save then get round-trips every field', () async {
+      final saved = await vocabulary.save(
+        word: '猫',
+        reading: 'ねこ',
+        meaning: 'cat (animal)',
+        pos: 'noun',
+        sourceType: SourceType.youtube,
+        sourceId: 'content-1',
+        sourceTitle: 'My Video',
+        timestampSeconds: 42,
+        contextSentence: '猫が好きです。',
+        sessionId: 'session-1',
+        state: VocabState.learning,
+        createdAt: now,
+      );
+
+      final loaded = await vocabulary.get(saved.id);
+
+      expect(loaded, isNotNull);
+      expect(loaded!.word, '猫');
+      expect(loaded.reading, 'ねこ');
+      expect(loaded.meaning, 'cat (animal)');
+      expect(loaded.pos, 'noun');
+      expect(loaded.sourceType, SourceType.youtube);
+      expect(loaded.sourceId, 'content-1');
+      expect(loaded.sourceTitle, 'My Video');
+      expect(loaded.timestampSeconds, 42);
+      expect(loaded.contextSentence, '猫が好きです。');
+      expect(loaded.sessionId, 'session-1');
+      expect(loaded.state, VocabState.learning);
+      expect(loaded.createdAt, now);
+      expect(loaded.updatedAt, now);
+      expect(loaded.encounterCount, 1);
+    });
+
+    test('generated ids are unique', () async {
+      final first = await vocabulary.save(
+        word: '猫',
+        sourceType: SourceType.manual,
+        sourceId: 'manual',
+        createdAt: now,
+      );
+      final second = await vocabulary.save(
+        word: '犬',
+        sourceType: SourceType.manual,
+        sourceId: 'manual',
+        createdAt: now,
+      );
+
+      expect(first.id, isNot(second.id));
+    });
+
+    test('blank optional fields are stored as null', () async {
+      final saved = await vocabulary.save(
+        word: '猫',
+        reading: '   ',
+        meaning: '',
+        pos: ' ',
+        sourceType: SourceType.manual,
+        sourceId: 'manual',
+        createdAt: now,
+      );
+
+      final loaded = await vocabulary.get(saved.id);
+
+      expect(loaded!.reading, isNull);
+      expect(loaded.meaning, isNull);
+      expect(loaded.pos, isNull);
+      expect(loaded.hasReading, isFalse);
+    });
+
+    test('watchAll returns newest first', () async {
+      await vocabulary.save(
+        word: '古い',
+        sourceType: SourceType.manual,
+        sourceId: 'manual',
+        createdAt: now.subtract(const Duration(days: 2)),
+      );
+      await vocabulary.save(
+        word: '新しい',
+        sourceType: SourceType.manual,
+        sourceId: 'manual',
+        createdAt: now,
+      );
+
+      final items = await vocabulary.watchAll().first;
+
+      expect(items.map((item) => item.word), ['新しい', '古い']);
+    });
+
+    test('findByWord matches the exact written form', () async {
+      final saved = await vocabulary.save(
+        word: '猫',
+        sourceType: SourceType.manual,
+        sourceId: 'manual',
+        createdAt: now,
+      );
+
+      expect((await vocabulary.findByWord('猫'))?.id, saved.id);
+      expect(await vocabulary.findByWord('ねこ'), isNull);
+      expect(await vocabulary.findByWord('犬'), isNull);
+    });
+
+    test(
+      'recordEncounter bumps the counter and the updated timestamp',
+      () async {
+        final saved = await vocabulary.save(
+          word: '猫',
+          sourceType: SourceType.manual,
+          sourceId: 'manual',
+          createdAt: now,
+        );
+
+        final later = now.add(const Duration(days: 1));
+        final updated = await vocabulary.recordEncounter(
+          saved.id,
+          encounteredAt: later,
+        );
+
+        expect(updated!.encounterCount, 2);
+        expect(updated.updatedAt, later);
+        expect(updated.createdAt, now);
+        expect((await vocabulary.get(saved.id))?.encounterCount, 2);
+      },
+    );
+
+    test('recordEncounter on an unknown id returns null', () async {
+      expect(await vocabulary.recordEncounter('nope'), isNull);
+      expect(await vocabulary.get('nope'), isNull);
+    });
+
+    test('update persists state changes', () async {
+      final saved = await vocabulary.save(
+        word: '猫',
+        sourceType: SourceType.manual,
+        sourceId: 'manual',
+        createdAt: now,
+      );
+
+      await vocabulary.update(
+        saved.copyWith(
+          state: VocabState.mastered,
+          meaning: () => 'feline',
+          updatedAt: now.add(const Duration(hours: 2)),
+        ),
+      );
+
+      final loaded = await vocabulary.get(saved.id);
+      expect(loaded!.state, VocabState.mastered);
+      expect(loaded.meaning, 'feline');
+      expect(loaded.updatedAt, now.add(const Duration(hours: 2)));
+    });
+
+    test('count and countByState aggregate the collection', () async {
+      await vocabulary.save(
+        word: '猫',
+        sourceType: SourceType.manual,
+        sourceId: 'manual',
+        state: VocabState.learning,
+        createdAt: now,
+      );
+      await vocabulary.save(
+        word: '犬',
+        sourceType: SourceType.manual,
+        sourceId: 'manual',
+        state: VocabState.learning,
+        createdAt: now,
+      );
+      await vocabulary.save(
+        word: '鳥',
+        sourceType: SourceType.manual,
+        sourceId: 'manual',
+        state: VocabState.mastered,
+        createdAt: now,
+      );
+
+      expect(await vocabulary.count(), 3);
+      final counts = await vocabulary.countByState();
+      expect(counts[VocabState.learning], 2);
+      expect(counts[VocabState.mastered], 1);
+      expect(counts[VocabState.unknown], 0);
+      expect(counts[VocabState.known], 0);
+      expect(counts[VocabState.encountered], 0);
+    });
+
+    test('delete removes the document', () async {
+      final saved = await vocabulary.save(
+        word: '猫',
+        sourceType: SourceType.manual,
+        sourceId: 'manual',
+        createdAt: now,
+      );
+
+      await vocabulary.delete(saved.id);
+
+      expect(await vocabulary.get(saved.id), isNull);
+      expect(await vocabulary.count(), 0);
+    });
+
+    test(
+      'documents land in the vocabulary collection under the user id',
+      () async {
+        await vocabulary.save(
+          word: '猫',
+          sourceType: SourceType.manual,
+          sourceId: 'manual',
+          createdAt: now,
+        );
+
+        final auth = LocalAuthRepository(store);
+        final uid = await auth.ensureUid();
+        final docs = await store.listDocs(
+          uid,
+          LocalVocabularyRepository.collection,
+        );
+
+        expect(docs, hasLength(1));
+        expect(docs.single['word'], '猫');
+        expect(docs.single['state'], 'encountered');
+      },
+    );
+
+    test(
+      'a saved word is immediately due for review as a vocabulary card',
+      () async {
+        final word = await vocabulary.save(
+          word: '猫',
+          reading: 'ねこ',
+          meaning: 'cat (animal)',
+          sourceType: SourceType.manual,
+          sourceId: 'manual',
+          createdAt: now,
+        );
+
+        final card = await reviews.createCard(
+          cardType: CardType.vocabulary,
+          sourceItemId: word.id,
+          promptText: word.word,
+          answerText: 'ねこ — cat (animal)',
+          createdAt: word.createdAt,
+        );
+
+        expect(card.cardType, CardType.vocabulary);
+        expect(await reviews.countDue(now: now), 1);
+
+        await vocabulary.delete(word.id);
+        await reviews.deleteCardsForSource(word.id);
+
+        expect(await vocabulary.count(), 0);
+        expect(await reviews.countDue(now: now), 0);
+      },
+    );
   });
 }
