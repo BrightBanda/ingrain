@@ -61,7 +61,7 @@ class _ContentAddViewState extends ConsumerState<ContentAddView> {
           );
 
       if (contentItem != null && mounted) {
-        context.go(
+        context.push(
           '/content/${contentItem.id}/transcript',
           extra: {
             'transcript': result.transcriptText ?? '',
@@ -79,7 +79,7 @@ class _ContentAddViewState extends ConsumerState<ContentAddView> {
           .read(contentViewModelProvider.notifier)
           .addContent(sourceUrl: url, title: title);
       if (result != null && mounted) {
-        context.go('/content/${result.id}/transcript');
+        context.push('/content/${result.id}/transcript');
       }
     } catch (e) {
       if (!mounted) return;

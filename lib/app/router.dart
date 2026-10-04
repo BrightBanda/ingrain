@@ -13,6 +13,7 @@ import 'package:ingrain/features/sentence_mining/presentation/view/sentence_mini
 import 'package:ingrain/features/settings/presentation/view/settings_view.dart';
 import 'package:ingrain/features/vocabulary/presentation/view/vocabulary_view.dart';
 import 'package:ingrain/features/srs/presentation/view/review_tab_view.dart';
+import 'package:ingrain/shared/widgets/double_back_to_exit.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authViewModelProvider);
@@ -113,16 +114,18 @@ class MainShellView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: child,
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _currentIndex(context),
-        onDestinationSelected: (index) {
-          context.go(_tabs[index].$3);
-        },
-        destinations: _tabs
-            .map((t) => NavigationDestination(icon: Icon(t.$1), label: t.$2))
-            .toList(),
+    return DoubleBackToExit(
+      child: Scaffold(
+        body: child,
+        bottomNavigationBar: NavigationBar(
+          selectedIndex: _currentIndex(context),
+          onDestinationSelected: (index) {
+            context.go(_tabs[index].$3);
+          },
+          destinations: _tabs
+              .map((t) => NavigationDestination(icon: Icon(t.$1), label: t.$2))
+              .toList(),
+        ),
       ),
     );
   }

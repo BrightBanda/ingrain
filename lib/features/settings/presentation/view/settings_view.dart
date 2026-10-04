@@ -11,7 +11,10 @@ class SettingsView extends ConsumerWidget {
     final uiState = ref.watch(settingsViewModelProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Settings')),
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        title: const Text('Settings'),
+      ),
       body: builderForState(uiState, context, ref),
     );
   }

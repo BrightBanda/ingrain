@@ -13,6 +13,7 @@ class ImmersionHomeView extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         title: const Text('ingrain'),
       ),
       body: RefreshIndicator(
@@ -91,7 +92,7 @@ class ImmersionHomeView extends ConsumerWidget {
                     ),
                     const SizedBox(height: 24),
                     FilledButton.icon(
-                      onPressed: () => context.go('/content/add'),
+                      onPressed: () => context.push('/content/add'),
                       icon: const Icon(Icons.add),
                       label: const Text('Add your first video'),
                     ),
@@ -136,7 +137,7 @@ class _QuickActions extends StatelessWidget {
       children: [
         Expanded(
           child: FilledButton.tonalIcon(
-            onPressed: () => context.go('/content/add'),
+            onPressed: () => context.push('/content/add'),
             icon: const Icon(Icons.add),
             label: const Text('Add content'),
           ),
@@ -165,7 +166,7 @@ class _ContentCard extends StatelessWidget {
 
     return Card(
       child: InkWell(
-        onTap: () => context.go('/content/${item.id}'),
+        onTap: () => context.push('/content/${item.id}'),
         child: Padding(
           padding: const EdgeInsets.all(14),
           child: Row(

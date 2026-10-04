@@ -29,6 +29,7 @@ class _ReviewTabViewState extends ConsumerState<ReviewTabView> {
 
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         title: const Text('Review'),
         actions: [
           if (dueCount != null && dueCount > 0)
@@ -201,7 +202,7 @@ class _ReviewTabViewState extends ConsumerState<ReviewTabView> {
             ),
             const SizedBox(height: 8),
             TextButton(
-              onPressed: () => context.go('/sentences'),
+              onPressed: () => context.push('/sentences'),
               child: const Text('Browse mined sentences'),
             ),
           ],

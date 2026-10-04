@@ -13,22 +13,23 @@ class ContentHistoryView extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         title: const Text('Library'),
         actions: [
           IconButton(
             icon: const Icon(Icons.translate),
             tooltip: 'Saved vocabulary',
-            onPressed: () => context.go('/vocabulary'),
+            onPressed: () => context.push('/vocabulary'),
           ),
           IconButton(
             icon: const Icon(Icons.bookmark_border),
             tooltip: 'Mined sentences',
-            onPressed: () => context.go('/sentences'),
+            onPressed: () => context.push('/sentences'),
           ),
           IconButton(
             icon: const Icon(Icons.add),
             tooltip: 'Add content',
-            onPressed: () => context.go('/content/add'),
+            onPressed: () => context.push('/content/add'),
           ),
         ],
       ),
@@ -76,7 +77,7 @@ class ContentHistoryView extends ConsumerWidget {
             ),
             const SizedBox(height: 20),
             FilledButton.icon(
-              onPressed: () => context.go('/content/add'),
+              onPressed: () => context.push('/content/add'),
               icon: const Icon(Icons.add),
               label: const Text('Add content'),
             ),
@@ -103,7 +104,7 @@ class ContentHistoryView extends ConsumerWidget {
 
         return Card(
           child: InkWell(
-            onTap: () => context.go('/content/${item.id}'),
+            onTap: () => context.push('/content/${item.id}'),
             child: Padding(
               padding: const EdgeInsets.all(14),
               child: Row(

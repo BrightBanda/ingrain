@@ -13,7 +13,10 @@ class ProgressTabView extends ConsumerWidget {
     final uiState = ref.watch(progressViewModelProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Progress')),
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        title: const Text('Progress'),
+      ),
       body: uiState.isLoading
           ? const Center(child: CircularProgressIndicator())
           : uiState.error != null
@@ -49,13 +52,13 @@ class ProgressTabView extends ConsumerWidget {
           ],
           const SizedBox(height: 8),
           OutlinedButton.icon(
-            onPressed: () => context.go('/vocabulary'),
+            onPressed: () => context.push('/vocabulary'),
             icon: const Icon(Icons.translate),
             label: const Text('Browse saved vocabulary'),
           ),
           const SizedBox(height: 8),
           OutlinedButton.icon(
-            onPressed: () => context.go('/sentences'),
+            onPressed: () => context.push('/sentences'),
             icon: const Icon(Icons.bookmark_border),
             label: const Text('Browse mined sentences'),
           ),
