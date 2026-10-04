@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:ingrain/app/theme/app_colors.dart';
 import 'package:ingrain/features/content/data/transcript_parser.dart';
 import 'package:ingrain/features/content/domain/transcript_sentence.dart';
 import 'package:ingrain/features/content/presentation/viewmodel/content_view_model.dart';
@@ -128,11 +127,11 @@ class _TranscriptEditorViewState extends ConsumerState<TranscriptEditorView> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Edit Transcript'),
-        backgroundColor: AppColors.primaryMain,
-        foregroundColor: AppColors.textOnPrimary,
         actions: [
           IconButton(
             icon: const Icon(Icons.preview),
@@ -157,20 +156,15 @@ class _TranscriptEditorViewState extends ConsumerState<TranscriptEditorView> {
                     controller: _durationController,
                     decoration: const InputDecoration(
                       labelText: 'Duration (seconds)',
-                      border: OutlineInputBorder(),
                     ),
                     keyboardType: TextInputType.number,
                   ),
                 ),
                 const SizedBox(width: 16),
-                ElevatedButton.icon(
+                FilledButton.tonalIcon(
                   onPressed: _parse,
                   icon: const Icon(Icons.auto_awesome),
                   label: const Text('Parse'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primaryMain,
-                    foregroundColor: AppColors.textOnPrimary,
-                  ),
                 ),
               ],
             ),
@@ -179,22 +173,36 @@ class _TranscriptEditorViewState extends ConsumerState<TranscriptEditorView> {
               widget.initialTranscript!.isNotEmpty &&
               widget.initialDuration != null &&
               widget.initialDuration! > 0)
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              color: AppColors.primaryPale,
-              child: Row(
-                children: [
-                  Icon(Icons.auto_awesome, size: 16, color: AppColors.primaryMain),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Transcript auto-fetched from YouTube',
-                    style: TextStyle(
-                      color: AppColors.primaryMain,
-                      fontSize: 12,
-                    ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primary.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: theme.colorScheme.primary.withValues(alpha: 0.2),
                   ),
-                ],
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.auto_awesome,
+                      size: 16,
+                      color: theme.colorScheme.primary,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Transcript auto-fetched from YouTube',
+                      style: TextStyle(
+                        color: theme.colorScheme.primary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           Expanded(
@@ -217,7 +225,7 @@ class _TranscriptEditorViewState extends ConsumerState<TranscriptEditorView> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text('Transcript'),
+          Text('Transcript', style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 8),
           Expanded(
             child: TextField(
@@ -226,7 +234,6 @@ class _TranscriptEditorViewState extends ConsumerState<TranscriptEditorView> {
                 hintText: _parseError.isNotEmpty
                     ? ''
                     : 'Paste SRT, WebVTT, or plain text...',
-                border: const OutlineInputBorder(),
                 errorText: _parseError.isNotEmpty ? _parseError : null,
               ),
               maxLines: null,
@@ -239,53 +246,73 @@ class _TranscriptEditorViewState extends ConsumerState<TranscriptEditorView> {
   }
 
   Widget _buildPreview() {
+    final theme = Theme.of(context);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Padding(
-          padding: EdgeInsets.all(16),
-          child: Text('Preview', style: TextStyle(fontWeight: FontWeight.bold)),
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: Text('Preview', style: theme.textTheme.titleMedium),
         ),
         Expanded(
           child: _preview.isEmpty
-              ? const Center(child: Text('No preview'))
-              : ListView.builder(
+              ? Center(
+                  child: Text(
+                    'No preview',
+                    style: theme.textTheme.bodyMedium,
+                  ),
+                )
+              : ListView.separated(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                   itemCount: _preview.length,
+                  separatorBuilder: (_, _) => const SizedBox(height: 8),
                   itemBuilder: (context, index) {
                     final s = _preview[index];
-                    return ListTile(
-                      leading: CircleClient(text: '${s.startSeconds}s'),
-                      title: Text(
-                        s.text,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      subtitle: Text(
-                        '${s.startSeconds}s - ${s.endSeconds}s',
-                        style: const TextStyle(color: AppColors.textSecondary),
+                    return Card(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 10,
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.primary
+                                    .withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                '${s.startSeconds}s',
+                                style: TextStyle(
+                                  color: theme.colorScheme.primary,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                s.text,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: theme.textTheme.bodyMedium,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     );
                   },
                 ),
         ),
       ],
-    );
-  }
-}
-
-class CircleClient extends StatelessWidget {
-  final String text;
-  const CircleClient({super.key, required this.text});
-
-  @override
-  Widget build(BuildContext context) {
-    return CircleAvatar(
-      radius: 24,
-      backgroundColor: AppColors.primaryPale,
-      child: Text(
-        text,
-        style: const TextStyle(color: AppColors.primaryMain, fontSize: 10),
-      ),
     );
   }
 }

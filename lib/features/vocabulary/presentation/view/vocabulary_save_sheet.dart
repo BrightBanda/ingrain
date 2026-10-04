@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:ingrain/app/theme/app_colors.dart';
 
 class VocabularySaveRequest {
   final String word;
@@ -125,7 +124,6 @@ class _VocabularySaveSheetState extends State<VocabularySaveSheet> {
                   helperText: widget.wordEditable
                       ? 'Required'
                       : 'Taken from the transcript',
-                  helperStyle: const TextStyle(color: AppColors.textSecondary),
                 ),
               ),
               if (widget.contextLabel != null) ...[
@@ -133,18 +131,20 @@ class _VocabularySaveSheetState extends State<VocabularySaveSheet> {
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: AppColors.primaryPale,
-                    borderRadius: BorderRadius.circular(8),
+                decoration: BoxDecoration(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .primary
+                      .withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  widget.contextLabel!,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    fontSize: 13,
+                    height: 1.5,
                   ),
-                  child: Text(
-                    widget.contextLabel!,
-                    style: const TextStyle(
-                      color: AppColors.primaryDark,
-                      fontSize: 13,
-                      height: 1.5,
-                    ),
-                  ),
+                ),
                 ),
               ],
               const SizedBox(height: 12),
@@ -177,7 +177,7 @@ class _VocabularySaveSheetState extends State<VocabularySaveSheet> {
                 const SizedBox(height: 12),
                 Text(
                   _errorText!,
-                  style: const TextStyle(color: AppColors.error),
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
                 ),
               ],
               const SizedBox(height: 20),

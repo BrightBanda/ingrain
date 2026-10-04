@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:ingrain/app/theme/app_colors.dart';
 import 'package:ingrain/features/content/data/youtube_transcript_fetcher.dart';
 import 'package:ingrain/features/content/data/youtube_url_parser.dart';
 import 'package:ingrain/features/content/presentation/viewmodel/content_view_model.dart';
@@ -98,12 +97,10 @@ class _ContentAddViewState extends ConsumerState<ContentAddView> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Add Content'),
-        backgroundColor: AppColors.primaryMain,
-        foregroundColor: AppColors.textOnPrimary,
-      ),
+      appBar: AppBar(title: const Text('Add Content')),
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -112,13 +109,17 @@ class _ContentAddViewState extends ConsumerState<ContentAddView> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const CircleAvatar(
-                  radius: 40,
-                  backgroundColor: AppColors.primaryPale,
+                Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(24),
+                  ),
                   child: Icon(
-                    Icons.add,
+                    Icons.video_library_outlined,
                     size: 40,
-                    color: AppColors.primaryMain,
+                    color: theme.colorScheme.primary,
                   ),
                 ),
                 const SizedBox(height: 24),
@@ -127,7 +128,7 @@ class _ContentAddViewState extends ConsumerState<ContentAddView> {
                   decoration: const InputDecoration(
                     labelText: 'YouTube URL or ID',
                     hintText: 'https://youtu.be/dQw4w9WgXcQ',
-                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.link),
                   ),
                   validator: (v) {
                     if (v == null || v.trim().isEmpty) {
@@ -141,7 +142,7 @@ class _ContentAddViewState extends ConsumerState<ContentAddView> {
                   controller: _titleController,
                   decoration: const InputDecoration(
                     labelText: 'Title',
-                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.title),
                   ),
                   validator: (v) {
                     if (v == null || v.trim().isEmpty) {
@@ -155,9 +156,11 @@ class _ContentAddViewState extends ConsumerState<ContentAddView> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Colors.orange.shade50,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.orange.shade200),
+                      color: Colors.orange.shade700.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: Colors.orange.shade700.withValues(alpha: 0.3),
+                      ),
                     ),
                     child: Row(
                       children: [
@@ -169,7 +172,10 @@ class _ContentAddViewState extends ConsumerState<ContentAddView> {
                         Expanded(
                           child: Text(
                             _fetchError!,
-                            style: TextStyle(color: Colors.orange.shade700),
+                            style: TextStyle(
+                              color: Colors.orange.shade700,
+                              fontSize: 13,
+                            ),
                           ),
                         ),
                       ],
@@ -180,8 +186,6 @@ class _ContentAddViewState extends ConsumerState<ContentAddView> {
                 FilledButton(
                   onPressed: _isFetching ? null : _submit,
                   style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.primaryMain,
-                    foregroundColor: AppColors.textOnPrimary,
                     minimumSize: const Size.fromHeight(48),
                   ),
                   child: _isFetching

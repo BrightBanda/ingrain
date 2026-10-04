@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:ingrain/app/theme/app_colors.dart';
 import 'package:ingrain/core/utils/duration_format.dart';
 import 'package:ingrain/features/content/domain/transcript_sentence.dart';
 import 'package:ingrain/features/content/presentation/viewmodel/content_view_model.dart';
@@ -25,6 +24,7 @@ class TranscriptView extends ConsumerWidget {
     final position = ref.watch(playbackPositionProvider);
     final controller = ref.watch(playerControllerProvider);
     final tokenizer = ref.watch(transcriptTokenizerProvider);
+    final theme = Theme.of(context);
 
     if (contentId == null) {
       return const Center(child: Text('No content selected'));
@@ -54,10 +54,22 @@ class TranscriptView extends ConsumerWidget {
                     )
                   : null,
               child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 10,
+                ),
                 decoration: BoxDecoration(
-                  color: isCurrent ? AppColors.primaryPale : Colors.transparent,
-                  borderRadius: BorderRadius.circular(4),
+                  color: isCurrent
+                      ? theme.colorScheme.primary.withValues(alpha: 0.08)
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(12),
+                  border: isCurrent
+                      ? Border.all(
+                          color: theme.colorScheme.primary.withValues(
+                            alpha: 0.25,
+                          ),
+                        )
+                      : null,
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -70,9 +82,14 @@ class TranscriptView extends ConsumerWidget {
                         ),
                         style: TextStyle(
                           color: isCurrent
-                              ? AppColors.primaryMain
-                              : AppColors.textSecondary,
+                              ? theme.colorScheme.primary
+                              : theme.colorScheme.onSurface.withValues(
+                                  alpha: 0.5,
+                                ),
                           fontSize: 12,
+                          fontWeight: isCurrent
+                              ? FontWeight.w600
+                              : FontWeight.w400,
                         ),
                       ),
                     ),
@@ -80,15 +97,15 @@ class TranscriptView extends ConsumerWidget {
                       child: TappableTranscriptText(
                         tokens: tokenizer.tokenize(sentence.text),
                         highlightColor: isCurrent
-                            ? AppColors.primaryDark
-                            : AppColors.textPrimary,
+                            ? theme.colorScheme.primary
+                            : theme.colorScheme.onSurface,
                         style: TextStyle(
                           color: isCurrent
-                              ? AppColors.primaryDark
-                              : AppColors.textPrimary,
+                              ? theme.colorScheme.primary
+                              : theme.colorScheme.onSurface,
                           fontWeight: isCurrent
                               ? FontWeight.bold
-                              : FontWeight.normal,
+                              : FontWeight.w400,
                         ),
                         onTokenTap: (token) => _openLookupSheet(
                           context,
@@ -101,7 +118,7 @@ class TranscriptView extends ConsumerWidget {
                     ),
                     IconButton(
                       icon: const Icon(Icons.bookmark_add_outlined),
-                      color: AppColors.primaryMain,
+                      color: theme.colorScheme.primary,
                       iconSize: 20,
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:ingrain/app/theme/app_colors.dart';
 import 'package:ingrain/core/utils/duration_format.dart';
 import 'package:ingrain/features/content/domain/content_item.dart';
 import 'package:ingrain/features/srs/presentation/viewmodel/review_view_model.dart';
@@ -30,17 +29,11 @@ class VocabularyView extends ConsumerWidget {
     final filter = ref.watch(vocabularyStateFilterProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Vocabulary'),
-        backgroundColor: AppColors.primaryMain,
-        foregroundColor: AppColors.textOnPrimary,
-      ),
+      appBar: AppBar(title: const Text('Vocabulary')),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _openManualAdd(context, ref),
         icon: const Icon(Icons.add),
         label: const Text('Add'),
-        backgroundColor: AppColors.primaryMain,
-        foregroundColor: AppColors.textOnPrimary,
       ),
       body: wordsAsync.when(
         data: (words) {
@@ -90,21 +83,30 @@ class VocabularyView extends ConsumerWidget {
   }
 
   Widget _buildEmpty(BuildContext context, {required bool filtered}) {
+    final theme = Theme.of(context);
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
-              Icons.translate,
-              size: 64,
-              color: AppColors.primaryLight,
+            Container(
+              width: 88,
+              height: 88,
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: Icon(
+                Icons.translate,
+                size: 44,
+                color: theme.colorScheme.primary,
+              ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
             Text(
               filtered ? 'No words in this state' : 'No saved words yet',
-              style: Theme.of(context).textTheme.headlineSmall,
+              style: theme.textTheme.headlineSmall,
             ),
             const SizedBox(height: 8),
             Text(
@@ -112,7 +114,7 @@ class VocabularyView extends ConsumerWidget {
                   ? 'Pick another state to see the rest.'
                   : 'Tap a word in a transcript to look it up and save it.',
               textAlign: TextAlign.center,
-              style: const TextStyle(color: AppColors.textSecondary),
+              style: theme.textTheme.bodyMedium,
             ),
           ],
         ),
@@ -206,6 +208,7 @@ class _FilterChip extends StatelessWidget {
       child: FilterChip(
         label: Text('$label $count'),
         selected: selected,
+        showCheckmark: false,
         onSelected: (_) => onTap(),
       ),
     );
@@ -222,40 +225,58 @@ class _VocabularyTile extends ConsumerWidget {
     final theme = Theme.of(context);
 
     return Card(
-      margin: EdgeInsets.zero,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 12, 4, 12),
+        padding: const EdgeInsets.fromLTRB(14, 14, 6, 14),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                word.word.characters.first.toUpperCase(),
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: theme.colorScheme.primary,
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     word.displayWithReading,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      color: AppColors.textPrimary,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: theme.textTheme.titleMedium?.copyWith(fontSize: 17),
                   ),
                   if (word.hasMeaning) ...[
                     const SizedBox(height: 4),
                     Text(
                       word.meaning!,
-                      style: const TextStyle(color: AppColors.textSecondary),
+                      style: theme.textTheme.bodyMedium,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                   const SizedBox(height: 10),
                   _StateStepper(word: word),
                   const SizedBox(height: 8),
-                  _SourceRow(word: word, theme: theme),
+                  _SourceRow(word: word),
                 ],
               ),
             ),
             IconButton(
-              icon: const Icon(Icons.delete_outline),
+              icon: Icon(
+                Icons.delete_outline,
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+              ),
               tooltip: 'Delete word',
               onPressed: () => _confirmDelete(context, ref),
             ),
@@ -307,6 +328,7 @@ class _StateStepper extends ConsumerWidget {
           ChoiceChip(
             label: Text(state.label),
             selected: word.state == state,
+            showCheckmark: false,
             visualDensity: VisualDensity.compact,
             labelStyle: const TextStyle(fontSize: 12),
             onSelected: (_) => ref
@@ -320,12 +342,12 @@ class _StateStepper extends ConsumerWidget {
 
 class _SourceRow extends StatelessWidget {
   final VocabularyItem word;
-  final ThemeData theme;
 
-  const _SourceRow({required this.word, required this.theme});
+  const _SourceRow({required this.word});
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final parts = <String>[];
     final title = word.sourceTitle;
     if (title != null && title.isNotEmpty) {
@@ -344,17 +366,18 @@ class _SourceRow extends StatelessWidget {
 
     return Row(
       children: [
-        const Icon(Icons.link, size: 14, color: AppColors.textSecondary),
+        Icon(
+          Icons.link,
+          size: 14,
+          color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+        ),
         const SizedBox(width: 4),
         Expanded(
           child: Text(
             parts.join(' • '),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: AppColors.textSecondary,
-              fontSize: 12,
-            ),
+            style: theme.textTheme.bodySmall?.copyWith(fontSize: 12),
           ),
         ),
       ],

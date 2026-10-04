@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:youtube_player_iframe/youtube_player_iframe.dart';
-import 'package:ingrain/app/theme/app_colors.dart';
 import 'package:ingrain/core/utils/duration_format.dart';
 import 'package:ingrain/features/content/data/youtube_url_parser.dart';
 import 'package:ingrain/features/content/domain/content_item.dart';
@@ -230,8 +229,6 @@ class _ImmersionPlayerViewState extends ConsumerState<ImmersionPlayerView> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('ingrain'),
-        backgroundColor: AppColors.primaryMain,
-        foregroundColor: AppColors.textOnPrimary,
         actions: [
           if (sessionState.isRunning && !sessionState.isPaused)
             const Padding(
@@ -286,19 +283,27 @@ class _ImmersionPlayerViewState extends ConsumerState<ImmersionPlayerView> {
   }
 
   Widget _buildPlayerError() {
+    final theme = Theme.of(context);
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(16, 10, 8, 10),
-      color: AppColors.primaryPale,
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      padding: const EdgeInsets.fromLTRB(14, 10, 8, 10),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.error.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: theme.colorScheme.error.withValues(alpha: 0.25),
+        ),
+      ),
       child: Row(
         children: [
-          const Icon(Icons.error_outline, size: 18, color: AppColors.error),
+          Icon(Icons.error_outline, size: 18, color: theme.colorScheme.error),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
               _playerError!,
-              style: const TextStyle(
-                color: AppColors.primaryDark,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.error,
                 fontSize: 12,
               ),
             ),
@@ -366,6 +371,7 @@ class _ImmersionPlayerViewState extends ConsumerState<ImmersionPlayerView> {
     SessionUiState sessionState,
     ImmersionSessionViewModel sessionVm,
   ) {
+    final theme = Theme.of(context);
     final title = contentAsync.whenOrNull(data: (c) => c.title) ?? 'Loading...';
 
     return Padding(
@@ -374,10 +380,10 @@ class _ImmersionPlayerViewState extends ConsumerState<ImmersionPlayerView> {
         children: [
           Text(
             formatDuration(Duration(seconds: sessionState.elapsedSeconds)),
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
-              color: AppColors.primaryMain,
+              color: theme.colorScheme.primary,
             ),
           ),
           const SizedBox(width: 16),

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:ingrain/app/theme/app_colors.dart';
 import 'package:ingrain/core/utils/duration_format.dart';
 import 'package:ingrain/features/progress/domain/progress_summary.dart';
 import 'package:ingrain/features/progress/presentation/viewmodel/progress_view_model.dart';
@@ -14,19 +13,7 @@ class ProgressTabView extends ConsumerWidget {
     final uiState = ref.watch(progressViewModelProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Progress'),
-        backgroundColor: AppColors.primaryMain,
-        foregroundColor: AppColors.textOnPrimary,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            tooltip: 'Refresh',
-            onPressed: () =>
-                ref.read(progressViewModelProvider.notifier).refresh(),
-          ),
-        ],
-      ),
+      appBar: AppBar(title: const Text('Progress')),
       body: uiState.isLoading
           ? const Center(child: CircularProgressIndicator())
           : uiState.error != null
@@ -43,14 +30,14 @@ class ProgressTabView extends ConsumerWidget {
     return RefreshIndicator(
       onRefresh: () => ref.read(progressViewModelProvider.notifier).refresh(),
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
         children: [
           _TodayCard(summary: summary),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           _StatGrid(summary: summary),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           _WeeklyChart(activities: summary.last7Days),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           _LearningCard(summary: summary),
           if (summary.dueCount > 0) ...[
             const SizedBox(height: 16),
@@ -60,7 +47,7 @@ class ProgressTabView extends ConsumerWidget {
               label: Text('Review ${summary.dueCount} due now'),
             ),
           ],
-          const SizedBox(height: 16),
+          const SizedBox(height: 8),
           OutlinedButton.icon(
             onPressed: () => context.go('/vocabulary'),
             icon: const Icon(Icons.translate),
@@ -74,12 +61,12 @@ class ProgressTabView extends ConsumerWidget {
           ),
           if (summary.isEmpty) ...[
             const SizedBox(height: 24),
-            const Center(
+            Center(
               child: Text(
                 'Start an immersion session and mine a sentence to see your '
                 'progress here.',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: AppColors.textSecondary),
+                style: Theme.of(context).textTheme.bodyMedium,
               ),
             ),
           ],
@@ -89,6 +76,7 @@ class ProgressTabView extends ConsumerWidget {
   }
 }
 
+/// Today's immersion against the daily goal, drawn as the dashboard hero.
 class _TodayCard extends StatelessWidget {
   final ProgressSummary summary;
 
@@ -97,60 +85,87 @@ class _TodayCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final goalReached = summary.todaySeconds >= summary.dailyGoalSeconds;
+    final theme = Theme.of(context);
 
-    return Card(
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Text('Today', style: Theme.of(context).textTheme.titleMedium),
-                const Spacer(),
-                Text(
-                  '${summary.dailyGoalMinutes} min goal',
-                  style: const TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Text(
-              formatDurationCompact(Duration(seconds: summary.todaySeconds)),
-              style: const TextStyle(
-                fontSize: 32,
-                fontWeight: FontWeight.bold,
-                color: AppColors.primaryMain,
-              ),
-            ),
-            const SizedBox(height: 12),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: LinearProgressIndicator(
-                value: summary.todayGoalProgress,
-                minHeight: 8,
-                backgroundColor: AppColors.primaryPale,
-                valueColor: AlwaysStoppedAnimation<Color>(
-                  goalReached ? Colors.green.shade600 : AppColors.primaryMain,
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              goalReached
-                  ? 'Daily goal reached'
-                  : '${formatDurationCompact(Duration(seconds: summary.dailyGoalSeconds - summary.todaySeconds))} to go',
-              style: const TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 12,
-              ),
-            ),
-          ],
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: goalReached
+              ? [
+                  theme.colorScheme.primary.withValues(alpha: 0.9),
+                  theme.colorScheme.tertiary.withValues(alpha: 0.8),
+                ]
+              : [
+                  theme.colorScheme.primary,
+                  theme.colorScheme.primary.withValues(alpha: 0.65),
+                ],
         ),
+        boxShadow: [
+          BoxShadow(
+            color: theme.colorScheme.primary.withValues(alpha: 0.25),
+            blurRadius: 18,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(
+                'Today',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  color: Colors.white,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                '${summary.dailyGoalMinutes} min goal',
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.8),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            formatDurationCompact(Duration(seconds: summary.todaySeconds)),
+            style: const TextStyle(
+              fontSize: 36,
+              fontWeight: FontWeight.w800,
+              color: Colors.white,
+              letterSpacing: -0.5,
+            ),
+          ),
+          const SizedBox(height: 14),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(999),
+            child: LinearProgressIndicator(
+              value: summary.todayGoalProgress,
+              minHeight: 8,
+              backgroundColor: Colors.white.withValues(alpha: 0.25),
+              valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            goalReached
+                ? 'Daily goal reached 🎉'
+                : '${formatDurationCompact(Duration(seconds: summary.dailyGoalSeconds - summary.todaySeconds))} to go',
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.85),
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -190,6 +205,9 @@ class _StatGrid extends StatelessWidget {
             label: 'Streak',
             value: '${summary.currentStreak}d',
             icon: Icons.local_fire_department,
+            accentColor: summary.currentStreak > 0
+                ? const Color(0xFFF59E0B)
+                : null,
             caption: summary.longestStreak > 0
                 ? 'best ${summary.longestStreak}d'
                 : null,
@@ -204,48 +222,50 @@ class _StatTile extends StatelessWidget {
   final String label;
   final String value;
   final IconData icon;
+  final Color? accentColor;
   final String? caption;
 
   const _StatTile({
     required this.label,
     required this.value,
     required this.icon,
+    this.accentColor,
     this.caption,
   });
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final accent = accentColor ?? theme.colorScheme.primary;
+
     return Card(
-      margin: EdgeInsets.zero,
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
         child: Column(
           children: [
-            Icon(icon, size: 20, color: AppColors.primaryMain),
-            const SizedBox(height: 8),
+            Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                color: accent.withValues(alpha: 0.12),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, size: 18, color: accent),
+            ),
+            const SizedBox(height: 10),
             Text(
               value,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: AppColors.textPrimary,
-              ),
+              style: theme.textTheme.titleMedium?.copyWith(fontSize: 16),
             ),
             const SizedBox(height: 2),
             Text(
               label,
-              style: const TextStyle(
-                fontSize: 11,
-                color: AppColors.textSecondary,
-              ),
+              style: theme.textTheme.bodySmall?.copyWith(fontSize: 11),
             ),
             if (caption != null)
               Text(
                 caption!,
-                style: const TextStyle(
-                  fontSize: 10,
-                  color: AppColors.textSecondary,
-                ),
+                style: theme.textTheme.bodySmall?.copyWith(fontSize: 10),
               ),
           ],
         ),
@@ -265,19 +285,19 @@ class _WeeklyChart extends StatelessWidget {
   Widget build(BuildContext context) {
     if (activities.isEmpty) return const SizedBox.shrink();
 
+    final theme = Theme.of(context);
     final maxSeconds = activities.fold<int>(
       0,
       (max, a) => a.seconds > max ? a.seconds : max,
     );
 
     return Card(
-      margin: EdgeInsets.zero,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Last 7 days', style: Theme.of(context).textTheme.titleMedium),
+            Text('Last 7 days', style: theme.textTheme.titleMedium),
             const SizedBox(height: 16),
             SizedBox(
               height: _maxBarHeight + 24,
@@ -317,10 +337,12 @@ class _DayBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final fraction = maxSeconds <= 0 ? 0.0 : activity.seconds / maxSeconds;
     final height = maxSeconds <= 0
         ? 2.0
         : (fraction * maxBarHeight).clamp(2.0, maxBarHeight);
+    final isActive = activity.hasActivity;
 
     return Column(
       mainAxisAlignment: MainAxisAlignment.end,
@@ -328,22 +350,39 @@ class _DayBar extends StatelessWidget {
         if (activity.reviews > 0)
           Text(
             '${activity.reviews}',
-            style: const TextStyle(fontSize: 10, color: AppColors.primaryMain),
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+              color: theme.colorScheme.primary,
+            ),
           ),
         Container(
           height: height,
-          margin: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
+          margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
           decoration: BoxDecoration(
-            color: activity.hasActivity
-                ? AppColors.primaryMain
-                : AppColors.primaryPale,
-            borderRadius: BorderRadius.circular(3),
+            gradient: isActive
+                ? LinearGradient(
+                    begin: Alignment.bottomCenter,
+                    end: Alignment.topCenter,
+                    colors: [
+                      theme.colorScheme.primary,
+                      theme.colorScheme.primary.withValues(alpha: 0.55),
+                    ],
+                  )
+                : null,
+            color: isActive
+                ? null
+                : theme.colorScheme.primary.withValues(alpha: 0.10),
+            borderRadius: BorderRadius.circular(6),
           ),
         ),
         const SizedBox(height: 4),
         Text(
           _weekdayLabels[activity.day.weekday - 1],
-          style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+          style: theme.textTheme.bodySmall?.copyWith(
+            fontSize: 11,
+            fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
+          ),
         ),
       ],
     );
@@ -357,14 +396,15 @@ class _LearningCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Card(
-      margin: EdgeInsets.zero,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Learning', style: Theme.of(context).textTheme.titleMedium),
+            Text('Learning', style: theme.textTheme.titleMedium),
             const SizedBox(height: 12),
             _LearningRow(
               icon: Icons.bookmark,
@@ -414,33 +454,33 @@ class _LearningRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Row(
       children: [
-        Icon(icon, size: 20, color: AppColors.primaryMain),
+        Container(
+          width: 34,
+          height: 34,
+          decoration: BoxDecoration(
+            color: theme.colorScheme.primary.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, size: 18, color: theme.colorScheme.primary),
+        ),
         const SizedBox(width: 12),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(label, style: const TextStyle(fontSize: 14)),
+              Text(label, style: theme.textTheme.bodyLarge),
               if (caption != null)
-                Text(
-                  caption!,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: AppColors.textSecondary,
-                  ),
-                ),
+                Text(caption!, style: theme.textTheme.bodySmall),
             ],
           ),
         ),
         Text(
           value,
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: AppColors.textPrimary,
-          ),
+          style: theme.textTheme.titleMedium?.copyWith(fontSize: 18),
         ),
       ],
     );

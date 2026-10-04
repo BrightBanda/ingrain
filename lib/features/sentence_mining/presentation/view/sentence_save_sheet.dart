@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:ingrain/app/theme/app_colors.dart';
 
 class SentenceSaveRequest {
   final String japanese;
@@ -123,7 +122,6 @@ class _SentenceSaveSheetState extends State<SentenceSaveSheet> {
                   helperText: widget.japaneseEditable
                       ? 'Required'
                       : 'Taken from the transcript',
-                  helperStyle: const TextStyle(color: AppColors.textSecondary),
                 ),
               ),
               const SizedBox(height: 12),
@@ -150,7 +148,7 @@ class _SentenceSaveSheetState extends State<SentenceSaveSheet> {
                 const SizedBox(height: 12),
                 Text(
                   _errorText!,
-                  style: const TextStyle(color: AppColors.error),
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
                 ),
               ],
               const SizedBox(height: 20),
@@ -174,17 +172,17 @@ class _ContextBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppColors.primaryPale,
+        color: theme.colorScheme.primary.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
         label,
-        style: const TextStyle(
-          color: AppColors.primaryDark,
+        style: theme.textTheme.bodyMedium?.copyWith(
           fontSize: 13,
           height: 1.5,
         ),

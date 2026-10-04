@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:ingrain/app/theme/app_colors.dart';
 import 'package:ingrain/core/utils/duration_format.dart';
 import 'package:ingrain/features/content/domain/content_item.dart';
 import 'package:ingrain/features/sentence_mining/domain/sentence_item.dart';
@@ -16,17 +15,11 @@ class SentenceMiningView extends ConsumerWidget {
     final sentencesAsync = ref.watch(sentenceMiningViewModelProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Mined Sentences'),
-        backgroundColor: AppColors.primaryMain,
-        foregroundColor: AppColors.textOnPrimary,
-      ),
+      appBar: AppBar(title: const Text('Mined Sentences')),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _openManualAdd(context, ref),
         icon: const Icon(Icons.add),
         label: const Text('Add'),
-        backgroundColor: AppColors.primaryMain,
-        foregroundColor: AppColors.textOnPrimary,
       ),
       body: sentencesAsync.when(
         data: (sentences) {
@@ -50,27 +43,36 @@ class SentenceMiningView extends ConsumerWidget {
   }
 
   Widget _buildEmpty(BuildContext context) {
+    final theme = Theme.of(context);
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
-              Icons.bookmark_border,
-              size: 64,
-              color: AppColors.primaryLight,
+            Container(
+              width: 88,
+              height: 88,
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: Icon(
+                Icons.bookmark_border,
+                size: 44,
+                color: theme.colorScheme.primary,
+              ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
             Text(
               'No mined sentences yet',
-              style: Theme.of(context).textTheme.headlineSmall,
+              style: theme.textTheme.headlineSmall,
             ),
             const SizedBox(height: 8),
-            const Text(
+            Text(
               'Save a line while watching, or add one by hand.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: AppColors.textSecondary),
+              style: theme.textTheme.bodyMedium,
             ),
           ],
         ),
@@ -113,36 +115,42 @@ class _SentenceTile extends ConsumerWidget {
     final theme = Theme.of(context);
 
     return Card(
-      margin: EdgeInsets.zero,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 12, 4, 12),
+        padding: const EdgeInsets.fromLTRB(14, 14, 6, 14),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                Icons.format_quote,
+                color: theme.colorScheme.primary,
+                size: 22,
+              ),
+            ),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     sentence.japanese,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      color: AppColors.textPrimary,
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                   if (sentence.hasTranslation) ...[
                     const SizedBox(height: 6),
-                    Text(
-                      sentence.translation!,
-                      style: const TextStyle(color: AppColors.textSecondary),
-                    ),
+                    Text(sentence.translation!, style: theme.textTheme.bodyMedium),
                   ],
                   if (sentence.explanation != null) ...[
                     const SizedBox(height: 6),
-                    Text(
-                      sentence.explanation!,
-                      style: theme.textTheme.bodySmall,
-                    ),
+                    Text(sentence.explanation!, style: theme.textTheme.bodySmall),
                   ],
                   const SizedBox(height: 8),
                   _SourceRow(sentence: sentence),
@@ -150,7 +158,10 @@ class _SentenceTile extends ConsumerWidget {
               ),
             ),
             IconButton(
-              icon: const Icon(Icons.delete_outline),
+              icon: Icon(
+                Icons.delete_outline,
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+              ),
               tooltip: 'Delete sentence',
               onPressed: () => _confirmDelete(context, ref),
             ),
@@ -196,6 +207,7 @@ class _SourceRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final parts = <String>[];
     final title = sentence.sourceTitle;
     if (title != null && title.isNotEmpty) {
@@ -211,10 +223,10 @@ class _SourceRow extends StatelessWidget {
 
     return Row(
       children: [
-        const Icon(
+        Icon(
           Icons.bookmark_border,
           size: 14,
-          color: AppColors.textSecondary,
+          color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
         ),
         const SizedBox(width: 4),
         Expanded(
@@ -222,10 +234,7 @@ class _SourceRow extends StatelessWidget {
             parts.join(' • '),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: AppColors.textSecondary,
-              fontSize: 12,
-            ),
+            style: theme.textTheme.bodySmall?.copyWith(fontSize: 12),
           ),
         ),
       ],

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:ingrain/app/theme/app_colors.dart';
 import 'package:ingrain/features/auth/presentation/viewmodel/auth_view_model.dart';
 import 'package:ingrain/features/settings/domain/app_settings.dart';
 import 'package:ingrain/features/settings/presentation/viewmodel/settings_view_model.dart';
@@ -48,13 +47,10 @@ class _OnboardingViewState extends ConsumerState<OnboardingView> {
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authViewModelProvider);
+    final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Welcome to ingrain'),
-        backgroundColor: AppColors.primaryMain,
-        foregroundColor: AppColors.textOnPrimary,
-      ),
+      appBar: AppBar(title: const Text('Welcome to ingrain')),
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -63,35 +59,47 @@ class _OnboardingViewState extends ConsumerState<OnboardingView> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const CircleAvatar(
-                  radius: 48,
-                  backgroundColor: AppColors.primaryPale,
-                  child: Icon(
-                    Icons.school,
+                Container(
+                  width: 96,
+                  height: 96,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        theme.colorScheme.primary,
+                        theme.colorScheme.tertiary,
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(28),
+                    boxShadow: [
+                      BoxShadow(
+                        color: theme.colorScheme.primary.withValues(alpha: 0.3),
+                        blurRadius: 20,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.spa,
                     size: 48,
-                    color: AppColors.primaryMain,
+                    color: Colors.white,
                   ),
                 ),
                 const SizedBox(height: 24),
-                Text(
-                  'Welcome',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    color: AppColors.primaryDark,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                Text('Welcome', style: theme.textTheme.headlineSmall),
                 const SizedBox(height: 8),
                 Text(
                   'Enter your name and daily immersion goal to get started.',
                   textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodyMedium,
+                  style: theme.textTheme.bodyMedium,
                 ),
                 const SizedBox(height: 24),
                 TextFormField(
                   controller: _nameController,
                   decoration: const InputDecoration(
                     labelText: 'Display name',
-                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.person_outline),
                   ),
                   validator: (v) =>
                       (v == null || v.trim().isEmpty) ? 'Enter a name' : null,
@@ -101,7 +109,7 @@ class _OnboardingViewState extends ConsumerState<OnboardingView> {
                   controller: _goalController,
                   decoration: const InputDecoration(
                     labelText: 'Daily goal (minutes)',
-                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.timer_outlined),
                   ),
                   keyboardType: TextInputType.number,
                   validator: (v) {
@@ -117,8 +125,6 @@ class _OnboardingViewState extends ConsumerState<OnboardingView> {
                     : FilledButton(
                         onPressed: _submit,
                         style: FilledButton.styleFrom(
-                          backgroundColor: AppColors.primaryMain,
-                          foregroundColor: AppColors.textOnPrimary,
                           minimumSize: const Size.fromHeight(48),
                         ),
                         child: const Text('Start using ingrain'),

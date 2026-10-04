@@ -91,7 +91,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/content/:id',
-        redirect: (context, state) => null,
         builder: (context, state) =>
             ImmersionPlayerView(contentId: state.pathParameters['id']!),
       ),

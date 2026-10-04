@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:ingrain/app/theme/app_colors.dart';
 import 'package:ingrain/features/vocabulary/domain/dictionary_index.dart';
 
 /// Tap-to-look-up sheet (product spec MVP #4).
@@ -43,10 +42,9 @@ class VocabularyLookupSheet extends StatelessWidget {
                   Expanded(
                     child: Text(
                       word,
-                      style: const TextStyle(
+                      style: theme.textTheme.headlineSmall?.copyWith(
                         fontSize: 30,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.primaryDark,
+                        color: theme.colorScheme.primary,
                       ),
                     ),
                   ),
@@ -63,7 +61,7 @@ class VocabularyLookupSheet extends StatelessWidget {
                     'Not in the bundled dictionary. Add the reading and '
                     'meaning yourself to keep it.',
                     style: theme.textTheme.bodyMedium?.copyWith(
-                      color: AppColors.textSecondary,
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                     ),
                   ),
                 )
@@ -71,9 +69,9 @@ class VocabularyLookupSheet extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   entry.reading,
-                  style: const TextStyle(
+                  style: theme.textTheme.bodyLarge?.copyWith(
                     fontSize: 15,
-                    color: AppColors.textSecondary,
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                   ),
                 ),
                 if (entry.pos != null) ...[
@@ -93,13 +91,12 @@ class VocabularyLookupSheet extends StatelessWidget {
                   width: double.infinity,
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: AppColors.primaryPale,
+                    color: theme.colorScheme.primary.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
                     contextLabel!,
-                    style: const TextStyle(
-                      color: AppColors.primaryDark,
+                    style: theme.textTheme.bodyMedium?.copyWith(
                       fontSize: 13,
                       height: 1.5,
                     ),
@@ -138,19 +135,20 @@ class _PosChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Align(
       alignment: Alignment.centerLeft,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
         decoration: BoxDecoration(
-          color: AppColors.primaryPale,
+          color: theme.colorScheme.primary.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 12,
-            color: AppColors.primaryDark,
+            color: theme.colorScheme.primary,
             fontWeight: FontWeight.w600,
           ),
         ),
