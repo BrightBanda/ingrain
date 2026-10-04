@@ -9,7 +9,9 @@ class YoutubeTranscriptFetcher {
       final video = await _youtubeExplode.videos.get(videoId);
       final duration = video.duration?.inSeconds ?? 0;
 
-      final manifest = await _youtubeExplode.videos.closedCaptions.getManifest(videoId);
+      final manifest = await _youtubeExplode.videos.closedCaptions.getManifest(
+        videoId,
+      );
 
       // Find the best track: prefer manual, then auto-generated
       final tracks = manifest.tracks;
@@ -31,7 +33,9 @@ class YoutubeTranscriptFetcher {
 
       String? transcriptText;
       if (track != null) {
-        final captionsTrack = await _youtubeExplode.videos.closedCaptions.get(track);
+        final captionsTrack = await _youtubeExplode.videos.closedCaptions.get(
+          track,
+        );
         transcriptText = _captionsToText(captionsTrack);
       }
 
@@ -44,8 +48,6 @@ class YoutubeTranscriptFetcher {
       throw YoutubeTranscriptException('YouTube error: ${e.message}');
     } catch (e) {
       throw YoutubeTranscriptException('Failed to fetch transcript: $e');
-    } finally {
-      _youtubeExplode.close();
     }
   }
 
@@ -68,7 +70,10 @@ class YoutubeTranscriptFetcher {
     final hours = d.inHours.toString().padLeft(2, '0');
     final minutes = d.inMinutes.remainder(60).toString().padLeft(2, '0');
     final seconds = d.inSeconds.remainder(60).toString().padLeft(2, '0');
-    final milliseconds = d.inMilliseconds.remainder(1000).toString().padLeft(3, '0');
+    final milliseconds = d.inMilliseconds
+        .remainder(1000)
+        .toString()
+        .padLeft(3, '0');
     return '$hours:$minutes:$seconds,$milliseconds';
   }
 }

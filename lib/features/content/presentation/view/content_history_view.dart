@@ -19,6 +19,11 @@ class ContentHistoryView extends ConsumerWidget {
         foregroundColor: AppColors.textOnPrimary,
         actions: [
           IconButton(
+            icon: const Icon(Icons.bookmark_border),
+            tooltip: 'Mined sentences',
+            onPressed: () => context.go('/sentences'),
+          ),
+          IconButton(
             icon: const Icon(Icons.add),
             onPressed: () => context.go('/content/add'),
           ),

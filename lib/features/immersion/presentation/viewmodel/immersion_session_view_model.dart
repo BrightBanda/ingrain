@@ -24,13 +24,21 @@ final clockProvider = Provider<Clock>((ref) => _defaultClock);
 final tickIntervalProvider =
     Provider<Duration>((ref) => const Duration(seconds: 1));
 
+/// Playback position is reported on every player tick (~4x/second). Persisting
+/// it that often means decoding and rewriting the whole sessions document on
+/// the UI isolate, so writes are throttled while in-memory state stays exact.
+final positionPersistIntervalProvider =
+    Provider<Duration>((ref) => const Duration(seconds: 5));
+
 class ImmersionSessionViewModel extends Notifier<SessionUiState> {
   final String contentId;
   late ImmersionRepository _repository;
   late Clock _clock;
   late Duration _tickInterval;
+  late Duration _positionPersistInterval;
   Timer? _timer;
   DateTime? _lastTickAt;
+  DateTime? _lastPositionPersistedAt;
   int _accumulatedSeconds = 0;
 
   ImmersionSessionViewModel({required this.contentId});
@@ -40,6 +48,7 @@ class ImmersionSessionViewModel extends Notifier<SessionUiState> {
     _repository = ref.watch(immersionRepositoryProvider);
     _clock = ref.watch(clockProvider);
     _tickInterval = ref.watch(tickIntervalProvider);
+    _positionPersistInterval = ref.watch(positionPersistIntervalProvider);
 
     ref.onDispose(() {
       _timer?.cancel();
@@ -72,6 +81,7 @@ class ImmersionSessionViewModel extends Notifier<SessionUiState> {
 
     _lastTickAt = now;
     _accumulatedSeconds = 0;
+    _lastPositionPersistedAt = null;
 
     state = SessionUiState(
       hasActiveSession: true,
@@ -153,19 +163,35 @@ class ImmersionSessionViewModel extends Notifier<SessionUiState> {
               : 0);
 
       await _repository.updateDuration(state.sessionId!, totalDuration);
+      // Flush the final position so throttling never loses it.
+      await _repository.updatePosition(
+        state.sessionId!,
+        state.lastPositionSeconds,
+      );
       await _repository.stopSession(state.sessionId!, now);
     }
 
     state = const SessionUiState();
     _accumulatedSeconds = 0;
     _lastTickAt = null;
+    _lastPositionPersistedAt = null;
   }
 
   Future<void> updatePosition(int seconds) async {
     state = state.copyWith(lastPositionSeconds: seconds);
-    if (state.sessionId != null) {
-      await _repository.updatePosition(state.sessionId!, seconds);
+
+    final sessionId = state.sessionId;
+    if (sessionId == null) return;
+
+    final now = _clock.now;
+    final lastPersistedAt = _lastPositionPersistedAt;
+    if (lastPersistedAt != null &&
+        now.difference(lastPersistedAt) < _positionPersistInterval) {
+      return;
     }
+
+    _lastPositionPersistedAt = now;
+    await _repository.updatePosition(sessionId, seconds);
   }
 }
 

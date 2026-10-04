@@ -11,8 +11,8 @@ import 'package:ingrain/features/immersion/presentation/viewmodel/immersion_sess
 
 final playbackPositionProvider =
     NotifierProvider<PlaybackPositionNotifier, Duration>(
-  PlaybackPositionNotifier.new,
-);
+      PlaybackPositionNotifier.new,
+    );
 
 class PlaybackPositionNotifier extends Notifier<Duration> {
   @override
@@ -25,8 +25,8 @@ class PlaybackPositionNotifier extends Notifier<Duration> {
 
 final playerControllerProvider =
     NotifierProvider<PlayerControllerNotifier, YoutubePlayerController?>(
-  PlayerControllerNotifier.new,
-);
+      PlayerControllerNotifier.new,
+    );
 
 class PlayerControllerNotifier extends Notifier<YoutubePlayerController?> {
   @override
@@ -49,7 +49,10 @@ class ImmersionPlayerView extends ConsumerStatefulWidget {
 
 class _ImmersionPlayerViewState extends ConsumerState<ImmersionPlayerView> {
   late YoutubePlayerController _controller;
-  bool _videoLoaded = false;
+  bool _videoLoadStarted = false;
+  bool _videoReady = false;
+  String? _videoId;
+  String? _playerError;
 
   @override
   void initState() {
@@ -84,17 +87,55 @@ class _ImmersionPlayerViewState extends ConsumerState<ImmersionPlayerView> {
     super.dispose();
   }
 
-  void _loadVideoIfNeeded(AsyncValue<ContentItem> contentAsync) {
-    contentAsync.whenOrNull(
-      data: (content) {
-        if (!_videoLoaded && content.sourceType == SourceType.youtube) {
-          _videoLoaded = true;
-          _controller.loadVideoById(videoId: content.id).then((_) {
-            _controller.setVolume(0);
-          });
-        }
-      },
-    );
+  Future<void> _loadVideoIfNeeded(AsyncValue<ContentItem> contentAsync) async {
+    final content = contentAsync.asData?.value;
+    if (content == null || _videoLoadStarted) return;
+    if (content.sourceType != SourceType.youtube) return;
+
+    _videoId = content.id;
+    _videoLoadStarted = true;
+    setState(() {
+      _playerError = null;
+      _videoReady = false;
+    });
+
+    try {
+      await _controller.loadVideoById(videoId: content.id);
+    } catch (_) {
+      // The bridge waits for the iframe API itself, but it can still time out
+      // or fail. Without this the rejection was unhandled and the player just
+      // stayed black with no explanation.
+      _videoLoadStarted = false;
+      if (!mounted) return;
+      setState(() => _playerError = 'Could not load this video.');
+      return;
+    }
+
+    if (!mounted) return;
+    setState(() => _videoReady = true);
+  }
+
+  /// Re-issues the load command after a failure.
+  Future<void> _retryLoad() async {
+    final videoId = _videoId;
+    if (videoId == null) return;
+    setState(() {
+      _playerError = null;
+      _videoReady = false;
+    });
+
+    try {
+      await _controller.loadVideoById(videoId: videoId);
+    } catch (_) {
+      if (!mounted) return;
+      setState(
+        () => _playerError = 'Could not load this video. Please try again.',
+      );
+      return;
+    }
+
+    if (!mounted) return;
+    setState(() => _videoReady = true);
   }
 
   Future<void> _seekRelative(int deltaSeconds) async {
@@ -136,11 +177,10 @@ class _ImmersionPlayerViewState extends ConsumerState<ImmersionPlayerView> {
       body: Column(
         children: [
           _buildPlayer(contentAsync),
+          if (_playerError != null) _buildPlayerError(),
           _buildPlaybackControls(),
           _buildSessionControls(contentAsync, sessionState, sessionVm),
-          Expanded(
-            child: TranscriptView(contentId: widget.contentId),
-          ),
+          Expanded(child: TranscriptView(contentId: widget.contentId)),
         ],
       ),
     );
@@ -152,13 +192,54 @@ class _ImmersionPlayerViewState extends ConsumerState<ImmersionPlayerView> {
         if (content.sourceType != SourceType.youtube) {
           return _placeholderPlayer('Only YouTube content is supported');
         }
-        return YoutubePlayer(
-          controller: _controller,
-          aspectRatio: 16 / 9,
+        // The iframe needs a moment to boot before the first frame renders.
+        // Without this the player is an unexplained black box on slow
+        // connections, which reads as "the video is not starting".
+        return Stack(
+          children: [
+            YoutubePlayer(controller: _controller, aspectRatio: 16 / 9),
+            if (!_videoReady && _playerError == null)
+              Positioned.fill(
+                child: ColoredBox(
+                  color: Colors.black12,
+                  child: const Center(
+                    child: SizedBox(
+                      height: 28,
+                      width: 28,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  ),
+                ),
+              ),
+          ],
         );
       },
       loading: () => _placeholderPlayer('Loading...'),
       error: (_, _) => _placeholderPlayer('Failed to load content'),
+    );
+  }
+
+  Widget _buildPlayerError() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(16, 10, 8, 10),
+      color: AppColors.primaryPale,
+      child: Row(
+        children: [
+          const Icon(Icons.error_outline, size: 18, color: AppColors.error),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              _playerError!,
+              style: const TextStyle(
+                color: AppColors.primaryDark,
+                fontSize: 12,
+              ),
+            ),
+          ),
+          TextButton(onPressed: _retryLoad, child: const Text('Retry')),
+        ],
+      ),
     );
   }
 
@@ -197,10 +278,7 @@ class _ImmersionPlayerViewState extends ConsumerState<ImmersionPlayerView> {
           DropdownButton<double>(
             value: 1.0,
             items: [0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0]
-                .map((v) => DropdownMenuItem(
-                      value: v,
-                      child: Text('${v}x'),
-                    ))
+                .map((v) => DropdownMenuItem(value: v, child: Text('${v}x')))
                 .toList(),
             onChanged: (value) {
               if (value != null) {
@@ -222,17 +300,14 @@ class _ImmersionPlayerViewState extends ConsumerState<ImmersionPlayerView> {
     SessionUiState sessionState,
     ImmersionSessionViewModel sessionVm,
   ) {
-    final title = contentAsync.whenOrNull(data: (c) => c.title) ??
-        'Loading...';
+    final title = contentAsync.whenOrNull(data: (c) => c.title) ?? 'Loading...';
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         children: [
           Text(
-            formatDuration(
-              Duration(seconds: sessionState.elapsedSeconds),
-            ),
+            formatDuration(Duration(seconds: sessionState.elapsedSeconds)),
             style: const TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
