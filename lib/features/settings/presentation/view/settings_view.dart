@@ -91,6 +91,12 @@ class SettingsView extends ConsumerWidget {
               onChanged: (v) => vm.setSubtitleFontSize(v),
               valueFormatter: (v) => '${v.toStringAsFixed(0)} pt',
             ),
+            SwitchListTile(
+              secondary: const Icon(Icons.translate_outlined),
+              title: const Text('Show romaji in dialogues'),
+              value: settings.showRomaji,
+              onChanged: vm.setShowRomaji,
+            ),
           ],
         ),
         _Section(
@@ -223,9 +229,7 @@ class _Section extends StatelessWidget {
               ),
             ),
           ),
-          Card(
-            child: Column(children: children),
-          ),
+          Card(child: Column(children: children)),
         ],
       ),
     );

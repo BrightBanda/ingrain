@@ -24,6 +24,7 @@ class LocalSettingsRepository implements SettingsRepository {
       themeMode: _parseThemeMode(doc['themeMode'] as String?),
       playbackSpeed: (doc['playbackSpeed'] as num?)?.toDouble() ?? 1.0,
       subtitleFontSize: (doc['subtitleFontSize'] as num?)?.toDouble() ?? 16.0,
+      showRomaji: doc['showRomaji'] as bool? ?? false,
     );
   }
 
@@ -35,6 +36,7 @@ class LocalSettingsRepository implements SettingsRepository {
       'themeMode': settings.themeMode.name,
       'playbackSpeed': settings.playbackSpeed,
       'subtitleFontSize': settings.subtitleFontSize,
+      'showRomaji': settings.showRomaji,
     });
   }
 
@@ -53,6 +55,9 @@ class LocalSettingsRepository implements SettingsRepository {
   @override
   Future<void> setSubtitleFontSize(double size) =>
       _updateField('subtitleFontSize', size);
+
+  @override
+  Future<void> setShowRomaji(bool show) => _updateField('showRomaji', show);
 
   Future<void> _updateField(String key, dynamic value) async {
     final uid = await _auth.ensureUid();

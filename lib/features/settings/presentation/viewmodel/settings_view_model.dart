@@ -98,4 +98,10 @@ class SettingsViewModel extends Notifier<SettingsUiState> {
     if (current == null) return;
     await update(current.copyWith(subtitleFontSize: size));
   }
+
+  Future<void> setShowRomaji(bool show) async {
+    final current = state.settings;
+    if (current == null) return;
+    await update(current.copyWith(showRomaji: show));
+  }
 }

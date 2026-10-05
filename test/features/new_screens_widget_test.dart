@@ -7,6 +7,10 @@ import 'package:ingrain/features/content/domain/content_item.dart';
 import 'package:ingrain/features/content/domain/transcript_sentence.dart';
 import 'package:ingrain/features/content/presentation/view/player/transcript_view.dart';
 import 'package:ingrain/features/content/presentation/viewmodel/content_view_model.dart';
+import 'package:ingrain/features/dialogue/domain/dialogue.dart';
+import 'package:ingrain/features/dialogue/domain/dialogue_repository.dart';
+import 'package:ingrain/features/dialogue/presentation/view/dialogue_reader_view.dart';
+import 'package:ingrain/features/dialogue/presentation/viewmodel/dialogue_providers.dart';
 import 'package:ingrain/features/immersion/domain/immersion_repository.dart';
 import 'package:ingrain/features/immersion/domain/immersion_session.dart';
 import 'package:ingrain/features/immersion/presentation/viewmodel/immersion_session_view_model.dart';
@@ -337,6 +341,27 @@ class EmptyImmersionRepository implements ImmersionRepository {
   Future<void> deleteSession(String sessionId) async {}
 }
 
+class InMemoryDialogueRepository implements DialogueRepository {
+  InMemoryDialogueRepository(this.dialogue);
+
+  final Dialogue dialogue;
+
+  @override
+  bool isShowingCachedCopy = false;
+
+  @override
+  Future<List<DialogueSummary>> listSummaries() async => [dialogue];
+
+  @override
+  Future<Dialogue> getDialogue(String id) async => dialogue;
+
+  @override
+  Future<Dialogue?> getCachedDialogue(String id) async => dialogue;
+
+  @override
+  Future<void> cacheDialogue(Dialogue dialogue) async {}
+}
+
 SentenceItem sampleSentence() => SentenceItem(
   id: 'sentence-1',
   uid: 'uid-1',
@@ -431,6 +456,8 @@ void main() {
     List<SentenceItem> sentences = const [],
     List<ReviewCard> cards = const [],
     List<VocabularyItem> words = const [],
+    DialogueRepository? dialogueRepository,
+    DictionaryIndex? dictionary,
   }) async {
     SharedPreferences.setMockInitialValues({});
     final prefs = await SharedPreferences.getInstance();
@@ -449,10 +476,14 @@ void main() {
         vocabularyRepositoryProvider.overrideWithValue(
           InMemoryVocabularyRepository([...words]),
         ),
-        dictionaryProvider.overrideWith((ref) async => testDictionary()),
+        dictionaryProvider.overrideWith(
+          (ref) async => dictionary ?? testDictionary(),
+        ),
         immersionRepositoryProvider.overrideWithValue(
           const EmptyImmersionRepository(),
         ),
+        if (dialogueRepository != null)
+          dialogueRepositoryProvider.overrideWithValue(dialogueRepository),
       ],
     );
     await tester.pumpWidget(
@@ -868,6 +899,126 @@ void main() {
           .findByWord('犬'))!;
       expect(saved.meaning, 'dog (animal)');
 
+      await tester.pump(const Duration(seconds: 5));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+    });
+  });
+
+  group('DialogueReaderView', () {
+    final sampleDialogue = Dialogue(
+      id: 'dialogue-1',
+      title: 'At the station',
+      level: 'N5',
+      source: const DialogueSource(attribution: 'Test source'),
+      lines: const [
+        DialogueLine(
+          index: 0,
+          speaker: 'ミカ',
+          tokens: [
+            DialogueToken(surface: '猫', reading: 'ねこ', romaji: 'neko'),
+            DialogueToken(surface: 'が', reading: 'が', romaji: 'ga'),
+            DialogueToken(surface: '好き', reading: 'すき', romaji: 'suki'),
+            DialogueToken(surface: 'です。', reading: 'です', romaji: 'desu'),
+          ],
+        ),
+      ],
+    );
+
+    Future<ProviderContainer> pumpDialogue(WidgetTester tester) => pumpScreen(
+      tester,
+      const DialogueReaderView(dialogueId: 'dialogue-1'),
+      dialogueRepository: InMemoryDialogueRepository(sampleDialogue),
+    );
+
+    testWidgets('romaji is hidden by default and can be toggled on', (
+      tester,
+    ) async {
+      await pumpDialogue(tester);
+
+      expect(find.text('neko'), findsNothing);
+      await tester.tap(find.byTooltip('Show romaji'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('neko'), findsOneWidget);
+      expect(find.text('suki'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('token lookup uses backend reading and can save vocabulary', (
+      tester,
+    ) async {
+      final container = await pumpDialogue(tester);
+
+      await tester.tap(find.text('猫'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('ねこ'), findsOneWidget);
+      expect(find.text('cat (animal)'), findsOneWidget);
+      await tester.tap(find.text('Save word'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Save word').last);
+      await tester.pumpAndSettle();
+
+      final saved = await container
+          .read(vocabularyRepositoryProvider)
+          .findByWord('猫');
+      expect(saved?.reading, 'ねこ');
+      expect(saved?.sourceType, SourceType.dialogue);
+      expect(saved?.sourceId, 'dialogue-1');
+      expect(find.text('Word saved for review'), findsOneWidget);
+      await tester.pump(const Duration(seconds: 5));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('backend reading remains visible when dictionary misses', (
+      tester,
+    ) async {
+      await pumpScreen(
+        tester,
+        const DialogueReaderView(dialogueId: 'dialogue-1'),
+        dialogueRepository: InMemoryDialogueRepository(sampleDialogue),
+        dictionary: DictionaryIndex.empty,
+      );
+
+      await tester.tap(find.text('猫'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Not in the bundled dictionary.'), findsOneWidget);
+      expect(find.text('ねこ'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('mining a line creates a dialogue sentence and review card', (
+      tester,
+    ) async {
+      final container = await pumpDialogue(tester);
+
+      await tester.tap(find.byTooltip('Mine sentence'));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Translation (optional)'),
+        'I like cats.',
+      );
+      await tester.tap(find.text('Save sentence'));
+      await tester.pumpAndSettle();
+
+      final sentenceRepository = container.read(
+        sentenceRepositoryProvider,
+      ) as InMemorySentenceRepository;
+      expect(
+        sentenceRepository.sentences.single.sourceType,
+        SourceType.dialogue,
+      );
+      expect(sentenceRepository.sentences.single.sourceId, 'dialogue-1');
+      expect(sentenceRepository.sentences.single.japanese, '猫が好きです。');
+
+      final reviewRepository =
+          container.read(reviewRepositoryProvider) as InMemoryReviewRepository;
+      expect(reviewRepository.cards.single.promptText, '猫が好きです。');
+      expect(reviewRepository.cards.single.answerText, 'I like cats.');
+      expect(find.text('Sentence saved for review'), findsOneWidget);
       await tester.pump(const Duration(seconds: 5));
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);

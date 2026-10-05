@@ -6,6 +6,7 @@ import 'package:ingrain/core/utils/clock.dart';
 import 'package:ingrain/features/auth/presentation/viewmodel/auth_view_model.dart';
 import 'package:ingrain/features/content/domain/content_item.dart';
 import 'package:ingrain/features/content/domain/transcript_sentence.dart';
+import 'package:ingrain/features/dialogue/domain/dialogue.dart';
 import 'package:ingrain/features/immersion/presentation/viewmodel/immersion_session_view_model.dart';
 import 'package:ingrain/features/sentence_mining/data/local_sentence_repository.dart';
 import 'package:ingrain/features/sentence_mining/domain/sentence_item.dart';
@@ -106,6 +107,25 @@ class SentenceMiningViewModel extends AsyncNotifier<List<SentenceItem>> {
     );
   }
 
+  Future<SentenceItem?> saveFromDialogue({
+    required String dialogueId,
+    required String dialogueTitle,
+    required DialogueLine line,
+    required List<DialogueLine> lines,
+    String? translation,
+    String? explanation,
+  }) {
+    return saveSentence(
+      japanese: line.text,
+      translation: translation,
+      explanation: explanation,
+      sourceType: SourceType.dialogue,
+      sourceId: dialogueId,
+      sourceTitle: dialogueTitle,
+      contextSentence: contextForDialogue(lines, line.index),
+    );
+  }
+
   Future<void> deleteSentence(String id) async {
     await _repository.delete(id);
     await _reviewRepository.deleteCardsForSource(id);
@@ -131,20 +151,20 @@ class SentenceMiningViewModel extends AsyncNotifier<List<SentenceItem>> {
     List<TranscriptSentence> transcript,
     int index,
   ) {
-    if (transcript.isEmpty) return null;
-    final buffer = StringBuffer();
-    if (index > 0 && index - 1 < transcript.length) {
-      buffer.write(transcript[index - 1].text);
-    }
-    if (index >= 0 && index < transcript.length) {
-      if (buffer.isNotEmpty) buffer.write(' ');
-      buffer.write(transcript[index].text);
-    }
-    if (index + 1 < transcript.length) {
-      if (buffer.isNotEmpty) buffer.write(' ');
-      buffer.write(transcript[index + 1].text);
-    }
-    final context = buffer.toString().trim();
+    return _contextAt(transcript.map((line) => line.text).toList(), index);
+  }
+
+  static String? contextForDialogue(List<DialogueLine> lines, int index) {
+    return _contextAt(lines.map((line) => line.text).toList(), index);
+  }
+
+  static String? _contextAt(List<String> lines, int index) {
+    if (lines.isEmpty) return null;
+    final context = [
+      if (index > 0 && index - 1 < lines.length) lines[index - 1],
+      if (index >= 0 && index < lines.length) lines[index],
+      if (index + 1 < lines.length) lines[index + 1],
+    ].where((text) => text.isNotEmpty).join(' ').trim();
     return context.isEmpty ? null : context;
   }
 }

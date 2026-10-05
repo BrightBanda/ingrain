@@ -1,4 +1,4 @@
-enum SourceType { youtube, podcast, manual }
+enum SourceType { youtube, podcast, manual, dialogue }
 
 class ContentItem {
   final String id;

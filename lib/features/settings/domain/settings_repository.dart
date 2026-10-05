@@ -12,4 +12,6 @@ abstract interface class SettingsRepository {
   Future<void> setPlaybackSpeed(double speed);
 
   Future<void> setSubtitleFontSize(double size);
+
+  Future<void> setShowRomaji(bool show);
 }

@@ -20,6 +20,7 @@ class ManualClock extends Clock {
 
 class FakeImmersionRepository implements ImmersionRepository {
   final List<ImmersionSession> sessions = [];
+  final Map<String, int> savedDurations = {};
 
   @override
   Future<ImmersionSession> startSession({
@@ -41,10 +42,15 @@ class FakeImmersionRepository implements ImmersionRepository {
   }
 
   @override
-  Future<void> updateDuration(String sessionId, int durationSeconds) async {}
+  Future<void> updateDuration(String sessionId, int durationSeconds) async {
+    savedDurations[sessionId] = durationSeconds;
+  }
 
   @override
-  Future<void> updatePosition(String sessionId, int lastPositionSeconds) async {}
+  Future<void> updatePosition(
+    String sessionId,
+    int lastPositionSeconds,
+  ) async {}
 
   @override
   Future<void> pauseSession(String sessionId, DateTime pausedAt) async {}
@@ -53,7 +59,12 @@ class FakeImmersionRepository implements ImmersionRepository {
   Future<void> resumeSession(String sessionId, DateTime resumedAt) async {}
 
   @override
-  Future<void> stopSession(String sessionId, DateTime endedAt) async {}
+  Future<void> stopSession(String sessionId, DateTime endedAt) async {
+    final index = sessions.indexWhere((session) => session.id == sessionId);
+    if (index != -1) {
+      sessions[index] = sessions[index].copyWith(endedAt: endedAt);
+    }
+  }
 
   @override
   Future<ImmersionSession?> getSession(String sessionId) async {
@@ -99,10 +110,10 @@ void main() {
     });
 
     test('initial state has no active session', () {
-      container.read(
-        immersionSessionViewModelProvider('content-1').notifier,
+      container.read(immersionSessionViewModelProvider('content-1').notifier);
+      final state = container.read(
+        immersionSessionViewModelProvider('content-1'),
       );
-      final state = container.read(immersionSessionViewModelProvider('content-1'));
 
       expect(state.hasActiveSession, isFalse);
       expect(state.isRunning, isFalse);
@@ -121,7 +132,9 @@ void main() {
 
       await Future.delayed(const Duration(milliseconds: 50));
 
-      final state = container.read(immersionSessionViewModelProvider('content-1'));
+      final state = container.read(
+        immersionSessionViewModelProvider('content-1'),
+      );
       expect(state.hasActiveSession, isTrue);
       expect(state.isRunning, isTrue);
       expect(state.isPaused, isFalse);
@@ -143,7 +156,9 @@ void main() {
       clock.advance(const Duration(seconds: 10));
       await Future.delayed(const Duration(milliseconds: 50));
 
-      final state = container.read(immersionSessionViewModelProvider('content-1'));
+      final state = container.read(
+        immersionSessionViewModelProvider('content-1'),
+      );
       expect(state.isRunning, isFalse);
       expect(state.isPaused, isTrue);
       expect(state.elapsedSeconds, greaterThanOrEqualTo(3));
@@ -166,7 +181,9 @@ void main() {
       clock.advance(const Duration(seconds: 3));
       await Future.delayed(const Duration(milliseconds: 50));
 
-      final state = container.read(immersionSessionViewModelProvider('content-1'));
+      final state = container.read(
+        immersionSessionViewModelProvider('content-1'),
+      );
       expect(state.isRunning, isTrue);
       expect(state.isPaused, isFalse);
       expect(state.elapsedSeconds, greaterThanOrEqualTo(5));
@@ -183,10 +200,14 @@ void main() {
 
       await vm.stopSession();
 
-      final state = container.read(immersionSessionViewModelProvider('content-1'));
+      final state = container.read(
+        immersionSessionViewModelProvider('content-1'),
+      );
       expect(state.hasActiveSession, isFalse);
       expect(state.isRunning, isFalse);
       expect(state.sessionId, isNull);
+      expect(repository.savedDurations['session-0'], 3);
+      expect(repository.sessions.single.isActive, isFalse);
     });
 
     test('updatePosition saves position to repository', () async {
@@ -197,7 +218,9 @@ void main() {
       await vm.startSession(sourceTitle: 'Video');
       await vm.updatePosition(120);
 
-      final state = container.read(immersionSessionViewModelProvider('content-1'));
+      final state = container.read(
+        immersionSessionViewModelProvider('content-1'),
+      );
       expect(state.lastPositionSeconds, 120);
     });
 
@@ -218,7 +241,9 @@ void main() {
       clock.advance(const Duration(seconds: 4));
       await Future.delayed(const Duration(milliseconds: 50));
 
-      final state = container.read(immersionSessionViewModelProvider('content-1'));
+      final state = container.read(
+        immersionSessionViewModelProvider('content-1'),
+      );
       expect(state.elapsedSeconds, greaterThanOrEqualTo(8));
     });
   });

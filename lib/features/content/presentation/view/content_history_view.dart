@@ -3,12 +3,22 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ingrain/features/content/domain/content_item.dart';
 import 'package:ingrain/features/content/presentation/viewmodel/content_view_model.dart';
+import 'package:ingrain/features/dialogue/presentation/view/library_content_filter.dart';
+import 'package:ingrain/features/dialogue/presentation/view/library_dialogue_list_view.dart';
 
-class ContentHistoryView extends ConsumerWidget {
+class ContentHistoryView extends ConsumerStatefulWidget {
   const ContentHistoryView({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ContentHistoryView> createState() => _ContentHistoryViewState();
+}
+
+class _ContentHistoryViewState extends ConsumerState<ContentHistoryView> {
+  LibraryContentFilter _filter = LibraryContentFilter.videos;
+
+  @override
+  Widget build(BuildContext context) {
+    final ref = this.ref;
     final uiState = ref.watch(contentViewModelProvider);
 
     return Scaffold(
@@ -16,16 +26,18 @@ class ContentHistoryView extends ConsumerWidget {
         automaticallyImplyLeading: false,
         title: const Text('Library'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.translate),
-            tooltip: 'Saved vocabulary',
-            onPressed: () => context.push('/vocabulary'),
-          ),
-          IconButton(
-            icon: const Icon(Icons.bookmark_border),
-            tooltip: 'Mined sentences',
-            onPressed: () => context.push('/sentences'),
-          ),
+          if (_filter == LibraryContentFilter.videos) ...[
+            IconButton(
+              icon: const Icon(Icons.translate),
+              tooltip: 'Saved vocabulary',
+              onPressed: () => context.push('/vocabulary'),
+            ),
+            IconButton(
+              icon: const Icon(Icons.bookmark_border),
+              tooltip: 'Mined sentences',
+              onPressed: () => context.push('/sentences'),
+            ),
+          ],
           IconButton(
             icon: const Icon(Icons.add),
             tooltip: 'Add content',
@@ -33,15 +45,28 @@ class ContentHistoryView extends ConsumerWidget {
           ),
         ],
       ),
-      body: uiState.when(
-        data: (items) {
-          if (items.isEmpty) {
-            return _buildEmpty(context);
-          }
-          return _buildList(context, ref, items);
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, st) => Center(child: Text('Error: $e')),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+            child: LibraryContentFilterControl(
+              selected: _filter,
+              onChanged: (filter) => setState(() => _filter = filter),
+            ),
+          ),
+          Expanded(
+            child: _filter == LibraryContentFilter.dialogues
+                ? const LibraryDialogueListView()
+                : uiState.when(
+                    data: (items) => items.isEmpty
+                        ? _buildEmpty(context)
+                        : _buildList(context, ref, items),
+                    loading: () =>
+                        const Center(child: CircularProgressIndicator()),
+                    error: (e, st) => Center(child: Text('Error: $e')),
+                  ),
+          ),
+        ],
       ),
     );
   }
@@ -130,13 +155,13 @@ class ContentHistoryView extends ConsumerWidget {
                           item.title,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.titleMedium
-                              ?.copyWith(fontSize: 15),
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontSize: 15,
+                          ),
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          item.channelTitle ??
-                              item.sourceType.name,
+                          item.channelTitle ?? item.sourceType.name,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: theme.textTheme.bodySmall,
@@ -162,8 +187,9 @@ class ContentHistoryView extends ConsumerWidget {
                         fontSize: 11,
                         color: minutes > 0
                             ? theme.colorScheme.primary
-                            : theme.colorScheme.onSurface
-                                .withValues(alpha: 0.6),
+                            : theme.colorScheme.onSurface.withValues(
+                                alpha: 0.6,
+                              ),
                       ),
                     ),
                   ),

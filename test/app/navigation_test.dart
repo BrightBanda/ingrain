@@ -6,6 +6,9 @@ import 'package:ingrain/app/router.dart';
 import 'package:ingrain/core/providers.dart';
 import 'package:ingrain/features/auth/domain/auth_state.dart';
 import 'package:ingrain/features/auth/presentation/viewmodel/auth_view_model.dart';
+import 'package:ingrain/features/dialogue/domain/dialogue.dart';
+import 'package:ingrain/features/dialogue/domain/dialogue_repository.dart';
+import 'package:ingrain/features/dialogue/presentation/viewmodel/dialogue_providers.dart';
 import 'package:ingrain/shared/widgets/double_back_to_exit.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -14,6 +17,35 @@ class OnboardedAuthViewModel extends AuthViewModel {
   @override
   AuthState build() =>
       const AuthState.ready(uid: 'uid-1', displayName: 'Tester');
+}
+
+class NavigationDialogueRepository implements DialogueRepository {
+  final dialogue = Dialogue(
+    id: 'lesson-1',
+    title: 'At the station',
+    level: 'N5',
+    lines: [
+      DialogueLine(
+        index: 0,
+        tokens: [DialogueToken(surface: '駅', reading: 'えき', romaji: 'eki')],
+      ),
+    ],
+  );
+
+  @override
+  bool isShowingCachedCopy = false;
+
+  @override
+  Future<List<DialogueSummary>> listSummaries() async => [dialogue];
+
+  @override
+  Future<Dialogue> getDialogue(String id) async => dialogue;
+
+  @override
+  Future<Dialogue?> getCachedDialogue(String id) async => dialogue;
+
+  @override
+  Future<void> cacheDialogue(Dialogue dialogue) async {}
 }
 
 void main() {
@@ -57,6 +89,9 @@ void main() {
       overrides: [
         sharedPreferencesProvider.overrideWithValue(prefs),
         authViewModelProvider.overrideWith(OnboardedAuthViewModel.new),
+        dialogueRepositoryProvider.overrideWithValue(
+          NavigationDialogueRepository(),
+        ),
       ],
     );
     addTearDown(container.dispose);
@@ -160,6 +195,26 @@ void main() {
       expect(exitCalls(), isEmpty);
       expect(find.text(DoubleBackToExit.message), findsNothing);
     });
+  });
+
+  testWidgets('Library filter shows dialogues and opens the reader', (
+    tester,
+  ) async {
+    await pumpApp(tester);
+
+    await tester.tap(find.text('Library').last);
+    await tester.pumpAndSettle();
+    expect(find.text('Videos'), findsOneWidget);
+    expect(find.text('Dialogues'), findsOneWidget);
+
+    await tester.tap(find.text('Dialogues'));
+    await tester.pumpAndSettle();
+    expect(find.text('At the station'), findsOneWidget);
+
+    await tester.tap(find.text('At the station'));
+    await tester.pumpAndSettle();
+    expect(find.text('駅'), findsOneWidget);
+    expect(find.byType(BackButton), findsOneWidget);
   });
 
   group('double back to exit', () {

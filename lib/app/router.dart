@@ -7,6 +7,7 @@ import 'package:ingrain/features/content/presentation/view/content_add_view.dart
 import 'package:ingrain/features/content/presentation/view/content_history_view.dart';
 import 'package:ingrain/features/content/presentation/view/transcript_editor_view.dart';
 import 'package:ingrain/features/content/presentation/view/player/immersion_player_view.dart';
+import 'package:ingrain/features/dialogue/presentation/view/dialogue_reader_view.dart';
 import 'package:ingrain/features/immersion/presentation/view/immersion_home_view.dart';
 import 'package:ingrain/features/progress/presentation/view/progress_tab_view.dart';
 import 'package:ingrain/features/sentence_mining/presentation/view/sentence_mining_view.dart';
@@ -78,6 +79,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/vocabulary',
         builder: (context, state) => const VocabularyView(),
+      ),
+      GoRoute(
+        path: '/dialogues/:id',
+        builder: (context, state) =>
+            DialogueReaderView(dialogueId: state.pathParameters['id']!),
       ),
       GoRoute(
         path: '/content/:id/transcript',

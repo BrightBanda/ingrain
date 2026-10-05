@@ -347,7 +347,7 @@ class _VocabularySaveSheetState extends State<VocabularySaveSheet> {
     while (cursor < text.length) {
       var matched = false;
       for (final replacement
-          in replacements.where((entry) => entry.key.length > 0).toList()
+          in replacements.where((entry) => entry.key.isNotEmpty).toList()
             ..sort((a, b) => b.key.length.compareTo(a.key.length))) {
         final key = replacement.key;
         if (text.startsWith(key, cursor)) {

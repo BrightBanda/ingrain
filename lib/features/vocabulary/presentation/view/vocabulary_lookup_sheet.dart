@@ -9,6 +9,7 @@ import 'package:ingrain/features/vocabulary/domain/dictionary_index.dart';
 class VocabularyLookupSheet extends StatelessWidget {
   final String word;
   final DictionaryEntry? entry;
+  final String? reading;
   final String? contextLabel;
   final bool alreadySaved;
   final VoidCallback? onJumpToTimestamp;
@@ -19,6 +20,7 @@ class VocabularyLookupSheet extends StatelessWidget {
     required this.word,
     required this.onSave,
     this.entry,
+    this.reading,
     this.contextLabel,
     this.alreadySaved = false,
     this.onJumpToTimestamp,
@@ -58,8 +60,10 @@ class VocabularyLookupSheet extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.only(top: 8),
                   child: Text(
-                    'Not in the bundled dictionary. Add the reading and '
-                    'meaning yourself to keep it.',
+                    reading == null
+                        ? 'Not in the bundled dictionary. Add the reading and '
+                              'meaning yourself to keep it.'
+                        : 'Not in the bundled dictionary.',
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                     ),
@@ -67,13 +71,17 @@ class VocabularyLookupSheet extends StatelessWidget {
                 )
               else ...[
                 const SizedBox(height: 4),
+              ],
+              if (reading != null || entry != null) ...[
                 Text(
-                  entry.reading,
+                  reading ?? entry!.reading,
                   style: theme.textTheme.bodyLarge?.copyWith(
                     fontSize: 15,
                     color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                   ),
                 ),
+              ],
+              if (entry != null) ...[
                 if (entry.pos != null) ...[
                   const SizedBox(height: 8),
                   _PosChip(label: entry.pos!),

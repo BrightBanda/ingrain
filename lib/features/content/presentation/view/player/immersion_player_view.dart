@@ -123,7 +123,7 @@ class _ImmersionPlayerViewState extends ConsumerState<ImmersionPlayerView> {
                   .read(contentItemProvider(widget.contentId))
                   .asData
                   ?.value
-                  ?.title ??
+                  .title ??
               'Video';
           sessionVm.startSession(sourceTitle: title);
         }

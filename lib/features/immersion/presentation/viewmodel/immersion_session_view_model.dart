@@ -150,31 +150,27 @@ class ImmersionSessionViewModel extends Notifier<SessionUiState> {
 
   Future<void> stopSession() async {
     _timer?.cancel();
+    final stoppedElapsedSeconds =
+        _accumulatedSeconds +
+        (_lastTickAt != null
+            ? _clock.now.difference(_lastTickAt!).inSeconds
+            : 0);
+    final stoppedPositionSeconds = state.lastPositionSeconds;
 
     if (state.sessionId != null) {
       final now = _clock.now;
-      final totalDuration =
-          _accumulatedSeconds +
-          (_lastTickAt != null ? now.difference(_lastTickAt!).inSeconds : 0);
-
-      await _repository.updateDuration(state.sessionId!, totalDuration);
+      await _repository.updateDuration(state.sessionId!, stoppedElapsedSeconds);
       // Flush the final position so throttling never loses it.
       await _repository.updatePosition(
         state.sessionId!,
-        state.lastPositionSeconds,
+        stoppedPositionSeconds,
       );
       await _repository.stopSession(state.sessionId!, now);
     }
 
-    state = state.copyWith(
-      hasActiveSession: false,
-      isRunning: false,
-      isPaused: false,
-      elapsedSeconds:
-          _accumulatedSeconds +
-          (_lastTickAt != null
-              ? _clock.now.difference(_lastTickAt!).inSeconds
-              : 0),
+    state = SessionUiState(
+      elapsedSeconds: stoppedElapsedSeconds,
+      lastPositionSeconds: stoppedPositionSeconds,
     );
     _accumulatedSeconds = 0;
     _lastTickAt = null;
