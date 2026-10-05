@@ -21,14 +21,16 @@ final immersionRepositoryProvider = Provider<ImmersionRepository>((ref) {
 
 final clockProvider = Provider<Clock>((ref) => _defaultClock);
 
-final tickIntervalProvider =
-    Provider<Duration>((ref) => const Duration(seconds: 1));
+final tickIntervalProvider = Provider<Duration>(
+  (ref) => const Duration(seconds: 1),
+);
 
 /// Playback position is reported on every player tick (~4x/second). Persisting
 /// it that often means decoding and rewriting the whole sessions document on
 /// the UI isolate, so writes are throttled while in-memory state stays exact.
-final positionPersistIntervalProvider =
-    Provider<Duration>((ref) => const Duration(seconds: 5));
+final positionPersistIntervalProvider = Provider<Duration>(
+  (ref) => const Duration(seconds: 5),
+);
 
 class ImmersionSessionViewModel extends Notifier<SessionUiState> {
   final String contentId;
@@ -127,10 +129,7 @@ class ImmersionSessionViewModel extends Notifier<SessionUiState> {
     _accumulatedSeconds += now.difference(_lastTickAt!).inSeconds;
     _lastTickAt = null;
 
-    state = state.copyWith(
-      isRunning: false,
-      isPaused: true,
-    );
+    state = state.copyWith(isRunning: false, isPaused: true);
 
     if (state.sessionId != null) {
       _repository.updateDuration(state.sessionId!, _accumulatedSeconds);
@@ -145,10 +144,7 @@ class ImmersionSessionViewModel extends Notifier<SessionUiState> {
 
   void _resumeSessionInternal() {
     _lastTickAt = _clock.now;
-    state = state.copyWith(
-      isRunning: true,
-      isPaused: false,
-    );
+    state = state.copyWith(isRunning: true, isPaused: false);
     _startTimer();
   }
 
@@ -157,10 +153,9 @@ class ImmersionSessionViewModel extends Notifier<SessionUiState> {
 
     if (state.sessionId != null) {
       final now = _clock.now;
-      final totalDuration = _accumulatedSeconds +
-          (_lastTickAt != null
-              ? now.difference(_lastTickAt!).inSeconds
-              : 0);
+      final totalDuration =
+          _accumulatedSeconds +
+          (_lastTickAt != null ? now.difference(_lastTickAt!).inSeconds : 0);
 
       await _repository.updateDuration(state.sessionId!, totalDuration);
       // Flush the final position so throttling never loses it.
@@ -171,7 +166,16 @@ class ImmersionSessionViewModel extends Notifier<SessionUiState> {
       await _repository.stopSession(state.sessionId!, now);
     }
 
-    state = const SessionUiState();
+    state = state.copyWith(
+      hasActiveSession: false,
+      isRunning: false,
+      isPaused: false,
+      elapsedSeconds:
+          _accumulatedSeconds +
+          (_lastTickAt != null
+              ? _clock.now.difference(_lastTickAt!).inSeconds
+              : 0),
+    );
     _accumulatedSeconds = 0;
     _lastTickAt = null;
     _lastPositionPersistedAt = null;
@@ -197,5 +201,5 @@ class ImmersionSessionViewModel extends Notifier<SessionUiState> {
 
 final immersionSessionViewModelProvider =
     NotifierProvider.family<ImmersionSessionViewModel, SessionUiState, String>(
-  (contentId) => ImmersionSessionViewModel(contentId: contentId),
-);
+      (contentId) => ImmersionSessionViewModel(contentId: contentId),
+    );

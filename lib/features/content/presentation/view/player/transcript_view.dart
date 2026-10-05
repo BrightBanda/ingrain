@@ -14,33 +14,80 @@ import 'package:ingrain/features/vocabulary/presentation/view/vocabulary_save_sh
 import 'package:ingrain/features/vocabulary/presentation/viewmodel/vocabulary_view_model.dart';
 import 'package:ingrain/features/vocabulary/presentation/widgets/tappable_transcript_text.dart';
 
-class TranscriptView extends ConsumerWidget {
+class TranscriptView extends ConsumerStatefulWidget {
   final String? contentId;
 
   const TranscriptView({super.key, this.contentId});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<TranscriptView> createState() => _TranscriptViewState();
+}
+
+class _TranscriptViewState extends ConsumerState<TranscriptView> {
+  final ScrollController _scrollController = ScrollController();
+  int? _lastScrolledIndex;
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _maybeScrollToCurrent(
+    List<TranscriptSentence> sentences,
+    Duration position,
+  ) {
+    if (!mounted || !_scrollController.hasClients) return;
+
+    final currentIndex = sentences.indexWhere(
+      (sentence) =>
+          position.inSeconds >= sentence.startSeconds &&
+          position.inSeconds < sentence.endSeconds,
+    );
+    if (currentIndex < 0 || currentIndex == _lastScrolledIndex) return;
+
+    _lastScrolledIndex = currentIndex;
+    final targetOffset = currentIndex * 68.0;
+    final maxOffset = _scrollController.position.maxScrollExtent;
+    final clampedOffset = targetOffset.clamp(0.0, maxOffset).toDouble();
+
+    _scrollController.animateTo(
+      clampedOffset,
+      duration: const Duration(milliseconds: 280),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final position = ref.watch(playbackPositionProvider);
     final controller = ref.watch(playerControllerProvider);
     final tokenizer = ref.watch(transcriptTokenizerProvider);
     final theme = Theme.of(context);
 
-    if (contentId == null) {
+    if (widget.contentId == null) {
       return const Center(child: Text('No content selected'));
     }
 
-    final transcriptAsync = ref.watch(transcriptProvider(contentId!));
+    final transcriptAsync = ref.watch(transcriptProvider(widget.contentId!));
 
     return transcriptAsync.when(
       data: (sentences) {
         if (sentences.isEmpty) {
           return const Center(child: Text('No transcript available'));
         }
+
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            _maybeScrollToCurrent(sentences, position);
+          }
+        });
+
         return ListView.separated(
+          controller: _scrollController,
           itemCount: sentences.length,
-          separatorBuilder: (_, _) => const SizedBox(height: 4),
-          padding: const EdgeInsets.all(16),
+          separatorBuilder: (_, _) => const SizedBox(height: 2),
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
           itemBuilder: (context, index) {
             final sentence = sentences[index];
             final isCurrent =
@@ -54,15 +101,12 @@ class TranscriptView extends ConsumerWidget {
                     )
                   : null,
               child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 10,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                 decoration: BoxDecoration(
                   color: isCurrent
                       ? theme.colorScheme.primary.withValues(alpha: 0.08)
                       : Colors.transparent,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(10),
                   border: isCurrent
                       ? Border.all(
                           color: theme.colorScheme.primary.withValues(
@@ -75,7 +119,7 @@ class TranscriptView extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     SizedBox(
-                      width: 50,
+                      width: 42,
                       child: Text(
                         formatDuration(
                           Duration(seconds: sentence.startSeconds),
@@ -86,7 +130,7 @@ class TranscriptView extends ConsumerWidget {
                               : theme.colorScheme.onSurface.withValues(
                                   alpha: 0.5,
                                 ),
-                          fontSize: 12,
+                          fontSize: 11,
                           fontWeight: isCurrent
                               ? FontWeight.w600
                               : FontWeight.w400,
@@ -106,6 +150,7 @@ class TranscriptView extends ConsumerWidget {
                           fontWeight: isCurrent
                               ? FontWeight.bold
                               : FontWeight.w400,
+                          fontSize: 14,
                         ),
                         onTokenTap: (token) => _openLookupSheet(
                           context,
@@ -119,11 +164,11 @@ class TranscriptView extends ConsumerWidget {
                     IconButton(
                       icon: const Icon(Icons.bookmark_add_outlined),
                       color: theme.colorScheme.primary,
-                      iconSize: 20,
+                      iconSize: 18,
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(
-                        minWidth: 32,
-                        minHeight: 32,
+                        minWidth: 28,
+                        minHeight: 28,
                       ),
                       tooltip: 'Mine this sentence',
                       onPressed: () => _openSaveSheet(
@@ -154,7 +199,7 @@ class TranscriptView extends ConsumerWidget {
     required TranscriptSentence sentence,
     required String word,
   }) async {
-    final contentId = this.contentId;
+    final contentId = widget.contentId;
     if (contentId == null) return;
 
     final controller = ref.watch(playerControllerProvider);
@@ -245,7 +290,7 @@ class TranscriptView extends ConsumerWidget {
     required List<TranscriptSentence> sentences,
     required TranscriptSentence sentence,
   }) async {
-    final contentId = this.contentId;
+    final contentId = widget.contentId;
     if (contentId == null) return;
 
     // Read lazily rather than watching: the player already keeps this provider

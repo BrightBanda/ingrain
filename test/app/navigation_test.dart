@@ -78,39 +78,85 @@ void main() {
       await pumpApp(tester);
 
       expect(find.text('ingrain'), findsOneWidget);
+      expect(find.text('YouTube video'), findsOneWidget);
+      expect(find.text('Japanese podcasts'), findsOneWidget);
+      final grid = tester.widget<SliverGrid>(find.byType(SliverGrid));
+      final gridDelegate =
+          grid.gridDelegate as SliverGridDelegateWithFixedCrossAxisCount;
+      expect(gridDelegate.crossAxisCount, 2);
+      expect(gridDelegate.childAspectRatio, 1);
+      await tester.drag(find.byType(CustomScrollView), const Offset(0, -240));
+      await tester.pumpAndSettle();
+      expect(find.text('Japanese dialogue'), findsOneWidget);
       expect(find.byType(BackButton), findsNothing);
     });
 
-    testWidgets('a pushed screen shows a back button that returns to the tab', (
+    testWidgets('study mode grid does not overflow on a phone viewport', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(360, 800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await pumpApp(tester);
+
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('a study card opens Library, where content can be added', (
       tester,
     ) async {
       await pumpApp(tester);
 
-      await tester.tap(find.text('Add your first video'));
+      await tester.tap(find.text('YouTube video'));
       await tester.pumpAndSettle();
 
+      expect(find.widgetWithText(AppBar, 'Library'), findsOneWidget);
+      expect(find.text('Add content'), findsOneWidget);
+
+      await tester.tap(find.text('Add content'));
+      await tester.pumpAndSettle();
       expect(find.widgetWithText(AppBar, 'Add Content'), findsOneWidget);
       expect(find.byType(BackButton), findsOneWidget);
 
       await tester.tap(find.byType(BackButton));
       await tester.pumpAndSettle();
 
-      expect(find.text('Add your first video'), findsOneWidget);
+      expect(find.widgetWithText(AppBar, 'Library'), findsOneWidget);
       expect(find.byType(BackButton), findsNothing);
     });
 
-    testWidgets('the system back button pops a pushed screen too', (
+    testWidgets('podcast and dialogue cards also open Library', (tester) async {
+      await pumpApp(tester);
+
+      await tester.tap(find.text('Japanese podcasts'));
+      await tester.pumpAndSettle();
+      expect(find.widgetWithText(AppBar, 'Library'), findsOneWidget);
+
+      await tester.tap(find.text('Immerse'));
+      await tester.pumpAndSettle();
+      await tester.drag(find.byType(CustomScrollView), const Offset(0, -240));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Japanese dialogue'));
+      await tester.pumpAndSettle();
+      expect(find.widgetWithText(AppBar, 'Library'), findsOneWidget);
+    });
+
+    testWidgets('system back from Add Content returns to Library', (
       tester,
     ) async {
       await pumpApp(tester);
 
-      await tester.tap(find.text('Add your first video'));
+      await tester.tap(find.text('YouTube video'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Add content'));
       await tester.pumpAndSettle();
       expect(find.widgetWithText(AppBar, 'Add Content'), findsOneWidget);
 
       await pressSystemBack(tester);
 
-      expect(find.text('Add your first video'), findsOneWidget);
+      expect(find.widgetWithText(AppBar, 'Library'), findsOneWidget);
       expect(exitCalls(), isEmpty);
       expect(find.text(DoubleBackToExit.message), findsNothing);
     });

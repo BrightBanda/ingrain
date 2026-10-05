@@ -21,8 +21,7 @@ class ImmersionHomeView extends ConsumerWidget {
         child: contentList.when(
           data: (items) => _buildHome(context, ref, items),
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (_, _) =>
-              const Center(child: Text('Failed to load content')),
+          error: (_, _) => const Center(child: Text('Failed to load content')),
         ),
       ),
     );
@@ -47,13 +46,45 @@ class ImmersionHomeView extends ConsumerWidget {
                 Text('Immerse', style: theme.textTheme.headlineSmall),
                 const SizedBox(height: 4),
                 Text(
-                  hasContent
-                      ? '${items.length} item${items.length == 1 ? '' : 's'} in your library'
-                      : 'Add your first video to start the loop',
+                  'Choose how you want to study Japanese',
                   style: theme.textTheme.bodyMedium,
                 ),
               ],
             ),
+          ),
+        ),
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+          sliver: SliverGrid(
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              mainAxisSpacing: 10,
+              crossAxisSpacing: 10,
+              childAspectRatio: 1,
+            ),
+            delegate: SliverChildListDelegate([
+              _StudyModeCard(
+                icon: Icons.smart_display_outlined,
+                title: 'YouTube video',
+                description: 'Watch with Japanese subtitles',
+                actionLabel: 'Open library',
+                onTap: () => context.go('/library'),
+              ),
+              _StudyModeCard(
+                icon: Icons.headphones_outlined,
+                title: 'Japanese podcasts',
+                description: 'Listen and pick up natural speech',
+                actionLabel: 'Open library',
+                onTap: () => context.go('/library'),
+              ),
+              _StudyModeCard(
+                icon: Icons.forum_outlined,
+                title: 'Japanese dialogue',
+                description: 'Read through everyday conversations',
+                actionLabel: 'Open library',
+                onTap: () => context.go('/library'),
+              ),
+            ]),
           ),
         ),
         if (!hasContent)
@@ -62,41 +93,9 @@ class ImmersionHomeView extends ConsumerWidget {
             child: Center(
               child: Padding(
                 padding: const EdgeInsets.all(32),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 96,
-                      height: 96,
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.primary.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(28),
-                      ),
-                      child: Icon(
-                        Icons.slow_motion_video_rounded,
-                        size: 48,
-                        color: theme.colorScheme.primary,
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    Text(
-                      'No content yet',
-                      style: theme.textTheme.titleLarge,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Add a YouTube video with Japanese captions and\n'
-                      'immerse with tap-to-look-up subtitles.',
-                      textAlign: TextAlign.center,
-                      style: theme.textTheme.bodyMedium,
-                    ),
-                    const SizedBox(height: 24),
-                    FilledButton.icon(
-                      onPressed: () => context.push('/content/add'),
-                      icon: const Icon(Icons.add),
-                      label: const Text('Add your first video'),
-                    ),
-                  ],
+                child: Text(
+                  'Your library is empty',
+                  style: theme.textTheme.bodyMedium,
                 ),
               ),
             ),
@@ -119,11 +118,76 @@ class ImmersionHomeView extends ConsumerWidget {
             sliver: SliverList.separated(
               itemCount: items.length,
               separatorBuilder: (_, _) => const SizedBox(height: 10),
-              itemBuilder: (context, index) =>
-                  _ContentCard(item: items[index]),
+              itemBuilder: (context, index) => _ContentCard(item: items[index]),
             ),
           ),
       ],
+    );
+  }
+}
+
+class _StudyModeCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String description;
+  final String actionLabel;
+  final VoidCallback? onTap;
+
+  const _StudyModeCard({
+    required this.icon,
+    required this.title,
+    required this.description,
+    required this.actionLabel,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final color = onTap == null
+        ? theme.colorScheme.onSurface.withValues(alpha: 0.45)
+        : theme.colorScheme.primary;
+
+    return Card(
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(8),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, color: color, size: 24),
+              const SizedBox(height: 6),
+              Text(
+                title,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: theme.textTheme.titleMedium?.copyWith(fontSize: 15),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                description,
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.bodySmall?.copyWith(fontSize: 12),
+              ),
+              const SizedBox(height: 6),
+              if (onTap == null)
+                Text(
+                  actionLabel,
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
+                    fontSize: 10,
+                  ),
+                )
+              else
+                Icon(Icons.chevron_right, color: color, size: 18),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -192,8 +256,9 @@ class _ContentCard extends StatelessWidget {
                       item.title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.titleMedium
-                          ?.copyWith(fontSize: 15),
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontSize: 15,
+                      ),
                     ),
                     const SizedBox(height: 2),
                     Text(

@@ -55,6 +55,7 @@ class _ImmersionPlayerViewState extends ConsumerState<ImmersionPlayerView> {
   StreamSubscription<YoutubePlayerValue>? _playerStreamSubscription;
   bool _videoLoadStarted = false;
   bool _videoReady = false;
+  bool _playerIsPlaying = false;
   String? _videoId;
   String? _playerError;
 
@@ -63,9 +64,9 @@ class _ImmersionPlayerViewState extends ConsumerState<ImmersionPlayerView> {
     super.initState();
     _controller = YoutubePlayerController(
       params: const YoutubePlayerParams(
-        showFullscreenButton: true,
+        showFullscreenButton: false,
         enableKeyboard: false,
-        showControls: true,
+        showControls: false,
         origin: 'https://www.youtube-nocookie.com',
         strictRelatedVideos: true,
       ),
@@ -104,6 +105,33 @@ class _ImmersionPlayerViewState extends ConsumerState<ImmersionPlayerView> {
             _videoReady = true;
             _playerError = null;
           });
+        }
+      }
+
+      final sessionVm = ref.read(
+        immersionSessionViewModelProvider(widget.contentId).notifier,
+      );
+      final sessionState = ref.read(
+        immersionSessionViewModelProvider(widget.contentId),
+      );
+
+      if (value.playerState == PlayerState.playing) {
+        _playerIsPlaying = true;
+        if (!sessionState.hasActiveSession && !sessionState.isPaused) {
+          final title =
+              ref
+                  .read(contentItemProvider(widget.contentId))
+                  .asData
+                  ?.value
+                  ?.title ??
+              'Video';
+          sessionVm.startSession(sourceTitle: title);
+        }
+      } else if (value.playerState == PlayerState.paused ||
+          value.playerState == PlayerState.ended) {
+        _playerIsPlaying = false;
+        if (sessionState.isRunning && !sessionState.isPaused) {
+          sessionVm.pauseSession();
         }
       }
     });
@@ -207,6 +235,69 @@ class _ImmersionPlayerViewState extends ConsumerState<ImmersionPlayerView> {
     final current = await _controller.currentTime;
     final target = (current + deltaSeconds).clamp(0.0, double.infinity);
     await _controller.seekTo(seconds: target);
+  }
+
+  Future<void> _togglePlayback() async {
+    final sessionVm = ref.read(
+      immersionSessionViewModelProvider(widget.contentId).notifier,
+    );
+    final sessionState = ref.read(
+      immersionSessionViewModelProvider(widget.contentId),
+    );
+    final content = ref
+        .read(contentItemProvider(widget.contentId))
+        .asData
+        ?.value;
+    final title = content?.title ?? 'Video';
+
+    if (_playerIsPlaying ||
+        _controller.value.playerState == PlayerState.playing) {
+      await _controller.pauseVideo();
+      if (sessionState.isRunning && !sessionState.isPaused) {
+        sessionVm.pauseSession();
+      }
+      return;
+    }
+
+    if (!sessionState.hasActiveSession) {
+      sessionVm.startSession(sourceTitle: title);
+    } else if (sessionState.isPaused) {
+      sessionVm.resumeSession();
+    }
+    await _controller.playVideo();
+  }
+
+  Future<void> _confirmStopSession() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Stop session?'),
+        content: const Text(
+          'This will end the current session, but the elapsed time will be saved.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Stop session'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    final sessionVm = ref.read(
+      immersionSessionViewModelProvider(widget.contentId).notifier,
+    );
+    await sessionVm.stopSession();
+    await _controller.pauseVideo();
+    if (mounted) {
+      setState(() => _playerIsPlaying = false);
+    }
   }
 
   @override
@@ -325,18 +416,19 @@ class _ImmersionPlayerViewState extends ConsumerState<ImmersionPlayerView> {
   }
 
   Widget _buildPlaybackControls() {
+    final isPlaying =
+        _playerIsPlaying ||
+        _controller.value.playerState == PlayerState.playing;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           IconButton(
-            icon: const Icon(Icons.play_arrow),
-            onPressed: () => _controller.playVideo(),
-          ),
-          IconButton(
-            icon: const Icon(Icons.pause),
-            onPressed: () => _controller.pauseVideo(),
+            icon: Icon(isPlaying ? Icons.pause : Icons.play_arrow),
+            tooltip: isPlaying ? 'Pause' : 'Play',
+            onPressed: _togglePlayback,
           ),
           IconButton(
             icon: const Icon(Icons.replay_10),
@@ -389,41 +481,11 @@ class _ImmersionPlayerViewState extends ConsumerState<ImmersionPlayerView> {
           const SizedBox(width: 16),
           Text(title, style: Theme.of(context).textTheme.bodyMedium),
           const Spacer(),
-          if (!sessionState.hasActiveSession)
-            ElevatedButton.icon(
-              onPressed: () {
-                sessionVm.startSession(sourceTitle: title);
-                _controller.playVideo();
-              },
-              icon: const Icon(Icons.play_circle),
-              label: const Text('Start Session'),
-            ),
-          if (sessionState.isRunning && !sessionState.isPaused)
-            ElevatedButton.icon(
-              onPressed: () {
-                sessionVm.pauseSession();
-                _controller.pauseVideo();
-              },
-              icon: const Icon(Icons.pause),
-              label: const Text('Pause'),
-            ),
-          if (sessionState.isPaused)
-            ElevatedButton.icon(
-              onPressed: () {
-                sessionVm.resumeSession();
-                _controller.playVideo();
-              },
-              icon: const Icon(Icons.play_arrow),
-              label: const Text('Resume'),
-            ),
           if (sessionState.hasActiveSession)
             TextButton.icon(
-              onPressed: () async {
-                await sessionVm.stopSession();
-                await _controller.pauseVideo();
-              },
+              onPressed: _confirmStopSession,
               icon: const Icon(Icons.stop),
-              label: const Text('Stop'),
+              label: const Text('Stop session'),
             ),
         ],
       ),
