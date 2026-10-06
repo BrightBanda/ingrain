@@ -1,0 +1,13 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "adb reverse API port",
+      "detail": "Makes the phone's 127.0.0.1:8000 reach the dialogue API on this computer",
+      "type": "shell",
+      "command": "adb reverse tcp:8000 tcp:8000",
+      "presentation": { "reveal": "silent" },
+      "problemMatcher": []
+    }
+  ]
+}

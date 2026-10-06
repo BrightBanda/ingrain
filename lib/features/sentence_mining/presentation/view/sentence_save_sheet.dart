@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:ingrain/app/theme/app_colors.dart';
+import 'package:ingrain/shared/widgets/colorful.dart';
 
 class SentenceSaveRequest {
   final String japanese;
@@ -118,7 +120,6 @@ class _SentenceSaveSheetState extends State<SentenceSaveSheet> {
                 style: const TextStyle(fontSize: 16),
                 decoration: InputDecoration(
                   labelText: 'Japanese',
-                  border: const OutlineInputBorder(),
                   helperText: widget.japaneseEditable
                       ? 'Required'
                       : 'Taken from the transcript',
@@ -131,7 +132,6 @@ class _SentenceSaveSheetState extends State<SentenceSaveSheet> {
                 maxLines: 3,
                 decoration: const InputDecoration(
                   labelText: 'Translation (optional)',
-                  border: OutlineInputBorder(),
                 ),
               ),
               const SizedBox(height: 12),
@@ -141,7 +141,6 @@ class _SentenceSaveSheetState extends State<SentenceSaveSheet> {
                 maxLines: 4,
                 decoration: const InputDecoration(
                   labelText: 'Explanation / notes (optional)',
-                  border: OutlineInputBorder(),
                 ),
               ),
               if (_errorText != null) ...[
@@ -153,6 +152,7 @@ class _SentenceSaveSheetState extends State<SentenceSaveSheet> {
               ],
               const SizedBox(height: 20),
               FilledButton.icon(
+                style: accentButtonStyle(AppColors.primaryMain),
                 onPressed: _submit,
                 icon: const Icon(Icons.bookmark_add),
                 label: const Text('Save sentence'),
@@ -177,15 +177,12 @@ class _ContextBox extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: theme.colorScheme.primary.withValues(alpha: 0.08),
+        color: AppColors.primaryMain.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
         label,
-        style: theme.textTheme.bodyMedium?.copyWith(
-          fontSize: 13,
-          height: 1.5,
-        ),
+        style: theme.textTheme.bodyMedium?.copyWith(fontSize: 13, height: 1.5),
       ),
     );
   }

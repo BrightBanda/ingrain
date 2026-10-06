@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ingrain/app/theme/app_colors.dart';
 import 'package:ingrain/core/utils/duration_format.dart';
 import 'package:ingrain/features/content/domain/content_item.dart';
 import 'package:ingrain/features/sentence_mining/domain/sentence_item.dart';
 import 'package:ingrain/features/sentence_mining/presentation/view/sentence_save_sheet.dart';
 import 'package:ingrain/features/sentence_mining/presentation/viewmodel/sentence_mining_view_model.dart';
 import 'package:ingrain/features/srs/presentation/viewmodel/review_view_model.dart';
+import 'package:ingrain/shared/widgets/colorful.dart';
 
 class SentenceMiningView extends ConsumerWidget {
   const SentenceMiningView({super.key});
@@ -17,6 +19,8 @@ class SentenceMiningView extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Mined Sentences')),
       floatingActionButton: FloatingActionButton.extended(
+        backgroundColor: AppColors.primaryMain,
+        foregroundColor: Colors.white,
         onPressed: () => _openManualAdd(context, ref),
         icon: const Icon(Icons.add),
         label: const Text('Add'),
@@ -43,40 +47,11 @@ class SentenceMiningView extends ConsumerWidget {
   }
 
   Widget _buildEmpty(BuildContext context) {
-    final theme = Theme.of(context);
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 88,
-              height: 88,
-              decoration: BoxDecoration(
-                color: theme.colorScheme.primary.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: Icon(
-                Icons.bookmark_border,
-                size: 44,
-                color: theme.colorScheme.primary,
-              ),
-            ),
-            const SizedBox(height: 20),
-            Text(
-              'No mined sentences yet',
-              style: theme.textTheme.headlineSmall,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Save a line while watching, or add one by hand.',
-              textAlign: TextAlign.center,
-              style: theme.textTheme.bodyMedium,
-            ),
-          ],
-        ),
-      ),
+    return const EmptyState(
+      icon: Icons.bookmark,
+      color: AppColors.primaryMain,
+      title: 'No mined sentences yet',
+      message: 'Save a line while watching, or add one by hand.',
     );
   }
 
@@ -120,18 +95,10 @@ class _SentenceTile extends ConsumerWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: theme.colorScheme.primary.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(
-                Icons.format_quote,
-                color: theme.colorScheme.primary,
-                size: 22,
-              ),
+            const IconBadge(
+              color: AppColors.primaryMain,
+              icon: Icons.format_quote,
+              solid: true,
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -146,11 +113,17 @@ class _SentenceTile extends ConsumerWidget {
                   ),
                   if (sentence.hasTranslation) ...[
                     const SizedBox(height: 6),
-                    Text(sentence.translation!, style: theme.textTheme.bodyMedium),
+                    Text(
+                      sentence.translation!,
+                      style: theme.textTheme.bodyMedium,
+                    ),
                   ],
                   if (sentence.explanation != null) ...[
                     const SizedBox(height: 6),
-                    Text(sentence.explanation!, style: theme.textTheme.bodySmall),
+                    Text(
+                      sentence.explanation!,
+                      style: theme.textTheme.bodySmall,
+                    ),
                   ],
                   const SizedBox(height: 8),
                   _SourceRow(sentence: sentence),

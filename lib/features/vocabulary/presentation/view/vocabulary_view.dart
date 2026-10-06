@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ingrain/app/theme/app_colors.dart';
 import 'package:ingrain/core/utils/duration_format.dart';
 import 'package:ingrain/features/content/domain/content_item.dart';
 import 'package:ingrain/features/srs/presentation/viewmodel/review_view_model.dart';
 import 'package:ingrain/features/vocabulary/domain/vocabulary_item.dart';
 import 'package:ingrain/features/vocabulary/presentation/view/vocabulary_save_sheet.dart';
 import 'package:ingrain/features/vocabulary/presentation/viewmodel/vocabulary_view_model.dart';
+import 'package:ingrain/shared/widgets/colorful.dart';
 
 /// Which vocabulary states the list shows. `null` means every state.
 class VocabularyFilterNotifier extends Notifier<VocabState?> {
@@ -31,6 +33,8 @@ class VocabularyView extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Vocabulary')),
       floatingActionButton: FloatingActionButton.extended(
+        backgroundColor: AppColors.primaryMain,
+        foregroundColor: Colors.white,
         onPressed: () => _openManualAdd(context, ref),
         icon: const Icon(Icons.add),
         label: const Text('Add'),
@@ -83,42 +87,13 @@ class VocabularyView extends ConsumerWidget {
   }
 
   Widget _buildEmpty(BuildContext context, {required bool filtered}) {
-    final theme = Theme.of(context);
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 88,
-              height: 88,
-              decoration: BoxDecoration(
-                color: theme.colorScheme.primary.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: Icon(
-                Icons.translate,
-                size: 44,
-                color: theme.colorScheme.primary,
-              ),
-            ),
-            const SizedBox(height: 20),
-            Text(
-              filtered ? 'No words in this state' : 'No saved words yet',
-              style: theme.textTheme.headlineSmall,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              filtered
-                  ? 'Pick another state to see the rest.'
-                  : 'Tap a word in a transcript to look it up and save it.',
-              textAlign: TextAlign.center,
-              style: theme.textTheme.bodyMedium,
-            ),
-          ],
-        ),
-      ),
+    return EmptyState(
+      icon: Icons.translate,
+      color: AppColors.primaryMain,
+      title: filtered ? 'No words in this state' : 'No saved words yet',
+      message: filtered
+          ? 'Pick another state to see the rest.'
+          : 'Tap a word in a transcript to look it up and save it.',
     );
   }
 
@@ -171,6 +146,7 @@ class _StateFilterBar extends StatelessWidget {
         children: [
           _FilterChip(
             label: 'All',
+            color: AppColors.primaryMain,
             count: total,
             selected: selected == null,
             onTap: () => onSelected(null),
@@ -178,6 +154,7 @@ class _StateFilterBar extends StatelessWidget {
           for (final state in VocabState.values)
             _FilterChip(
               label: state.label,
+              color: AppColors.primaryMain,
               count: counts[state] ?? 0,
               selected: selected == state,
               onTap: () => onSelected(state),
@@ -190,12 +167,14 @@ class _StateFilterBar extends StatelessWidget {
 
 class _FilterChip extends StatelessWidget {
   final String label;
+  final Color color;
   final int count;
   final bool selected;
   final VoidCallback onTap;
 
   const _FilterChip({
     required this.label,
+    required this.color,
     required this.count,
     required this.selected,
     required this.onTap,
@@ -208,6 +187,13 @@ class _FilterChip extends StatelessWidget {
       child: FilterChip(
         label: Text('$label $count'),
         selected: selected,
+        side: BorderSide.none,
+        backgroundColor: color.withValues(alpha: 0.12),
+        selectedColor: color,
+        labelStyle: TextStyle(
+          color: selected ? onAccent(color) : color,
+          fontWeight: FontWeight.w600,
+        ),
         showCheckmark: false,
         onSelected: (_) => onTap(),
       ),
@@ -223,6 +209,7 @@ class _VocabularyTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final color = AppColors.primaryMain;
 
     return Card(
       child: Padding(
@@ -230,20 +217,15 @@ class _VocabularyTile extends ConsumerWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: theme.colorScheme.primary.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              alignment: Alignment.center,
+            IconBadge(
+              color: color,
+              solid: true,
               child: Text(
                 word.word.characters.first.toUpperCase(),
                 style: TextStyle(
-                  fontSize: 18,
+                  fontSize: 19,
                   fontWeight: FontWeight.w700,
-                  color: theme.colorScheme.primary,
+                  color: onAccent(color),
                 ),
               ),
             ),
@@ -330,7 +312,16 @@ class _StateStepper extends ConsumerWidget {
             selected: word.state == state,
             showCheckmark: false,
             visualDensity: VisualDensity.compact,
-            labelStyle: const TextStyle(fontSize: 12),
+            side: BorderSide.none,
+            backgroundColor: AppColors.primaryMain.withValues(alpha: 0.1),
+            selectedColor: AppColors.primaryMain,
+            labelStyle: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: word.state == state
+                  ? onAccent(AppColors.primaryMain)
+                  : AppColors.primaryMain,
+            ),
             onSelected: (_) => ref
                 .read(vocabularyViewModelProvider.notifier)
                 .setState(word.id, state),

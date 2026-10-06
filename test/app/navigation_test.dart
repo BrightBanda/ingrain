@@ -2,14 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:ingrain/app/router.dart';
 import 'package:ingrain/features/auth/domain/auth_state.dart';
 import 'package:ingrain/features/auth/presentation/viewmodel/auth_view_model.dart';
 import 'package:ingrain/features/dialogue/domain/dialogue.dart';
 import 'package:ingrain/features/dialogue/domain/dialogue_repository.dart';
 import 'package:ingrain/features/dialogue/presentation/viewmodel/dialogue_providers.dart';
+import 'package:ingrain/features/vocabulary/domain/dictionary_index.dart';
+import 'package:ingrain/features/vocabulary/presentation/viewmodel/vocabulary_view_model.dart';
 import 'package:ingrain/shared/widgets/double_back_to_exit.dart';
+
 import '../support/test_overrides.dart';
+
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Skips the onboarding bootstrap so the router settles straight on the shell.
@@ -92,6 +97,17 @@ void main() {
         dialogueRepositoryProvider.overrideWithValue(
           NavigationDialogueRepository(),
         ),
+        // The real asset is decoded on a background isolate, which never
+        // completes under the widget tester's fake async.
+        dictionaryProvider.overrideWith(
+          (ref) async => DictionaryIndex(const [
+            DictionaryEntry(
+              surface: 'おはよう',
+              reading: 'おはよう',
+              meanings: ['good morning'],
+            ),
+          ]),
+        ),
       ],
     );
     addTearDown(container.dispose);
@@ -108,47 +124,287 @@ void main() {
     return container;
   }
 
-  group('app bar back buttons', () {
-    testWidgets('the root tab offers no back button', (tester) async {
+  Future<void> tapTab(WidgetTester tester, String label) async {
+    await tester.tap(
+      find.descendant(
+        of: find.byType(NavigationBar),
+        matching: find.text(label),
+      ),
+    );
+    await tester.pumpAndSettle();
+  }
+
+  Future<void> openLearn(WidgetTester tester, String destination) async {
+    await tapTab(tester, 'Learn');
+    await tester.tap(find.text(destination));
+    await tester.pumpAndSettle();
+  }
+
+  Future<void> openLibrary(WidgetTester tester) async {
+    await tester.tap(find.text('Library').last);
+    await tester.pumpAndSettle();
+  }
+
+  group('home', () {
+    testWidgets('shows start, recommendations and no back button', (
+      tester,
+    ) async {
       await pumpApp(tester);
 
       expect(find.text('ingrain'), findsOneWidget);
-      expect(find.text('YouTube video'), findsOneWidget);
-      expect(find.text('Japanese podcasts'), findsOneWidget);
-      final grid = tester.widget<SliverGrid>(find.byType(SliverGrid));
-      final gridDelegate =
-          grid.gridDelegate as SliverGridDelegateWithFixedCrossAxisCount;
-      expect(gridDelegate.crossAxisCount, 2);
-      expect(gridDelegate.childAspectRatio, 1);
-      await tester.drag(find.byType(CustomScrollView), const Offset(0, -240));
-      await tester.pumpAndSettle();
-      expect(find.text('Japanese dialogue'), findsOneWidget);
+      expect(find.text('Start immersing'), findsOneWidget);
+      expect(find.text("Today's goal"), findsOneWidget);
+      expect(find.text('Flashcards'), findsWidgets);
+      expect(find.text('YouTube video'), findsNothing);
       expect(find.byType(BackButton), findsNothing);
+
+      await tester.scrollUntilVisible(find.text('At the station'), 200);
+      expect(find.text('Recommended video'), findsOneWidget);
+      expect(find.text('Add your first YouTube video'), findsOneWidget);
+      expect(find.text('Dialogue of the day'), findsOneWidget);
     });
 
-    testWidgets('study mode grid does not overflow on a phone viewport', (
-      tester,
-    ) async {
+    testWidgets('does not overflow on a phone viewport', (tester) async {
       tester.view.physicalSize = const Size(360, 800);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
 
       await pumpApp(tester);
+      await openLibrary(tester);
 
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('a study card opens Library, where content can be added', (
+    testWidgets('start immersing opens the dialogue when there is no video', (
       tester,
     ) async {
       await pumpApp(tester);
 
-      await tester.tap(find.text('YouTube video'));
+      expect(find.text('Read · At the station'), findsOneWidget);
+      await tester.tap(find.text('Start immersing'));
       await tester.pumpAndSettle();
 
-      expect(find.widgetWithText(AppBar, 'Library'), findsOneWidget);
-      expect(find.text('Add content'), findsOneWidget);
+      expect(find.text('駅'), findsOneWidget);
+      expect(find.byType(BackButton), findsOneWidget);
+    });
+  });
+
+  group('bottom navigation', () {
+    testWidgets('Learn opens a menu above the bar with Vocab and Kana', (
+      tester,
+    ) async {
+      await pumpApp(tester);
+
+      await tapTab(tester, 'Learn');
+      expect(find.text('Vocab'), findsOneWidget);
+      expect(find.text('Kana'), findsOneWidget);
+      final menuBottom = tester.getBottomLeft(find.text('Kana')).dy;
+      final barTop = tester.getTopLeft(find.byType(NavigationBar)).dy;
+      expect(menuBottom, lessThan(barTop));
+
+      await tester.tap(find.text('Kana'));
+      await tester.pumpAndSettle();
+      expect(find.widgetWithText(AppBar, 'Kana'), findsOneWidget);
+      expect(find.text('あ'), findsOneWidget);
+      expect(find.text('shi'), findsWidgets);
+
+      await tester.tap(find.textContaining('Katakana'));
+      await tester.pumpAndSettle();
+      expect(find.text('ア'), findsOneWidget);
+
+      await openLearn(tester, 'Vocab');
+      expect(find.widgetWithText(AppBar, 'Vocabulary'), findsOneWidget);
+      expect(find.byType(BackButton), findsNothing);
+    });
+
+    testWidgets('Profile shows progress and settings tabs', (tester) async {
+      await pumpApp(tester);
+
+      await tapTab(tester, 'Profile');
+      expect(find.text('Tester'), findsOneWidget);
+      expect(find.text('Today'), findsOneWidget);
+
+      await tester.tap(find.widgetWithText(Tab, 'Settings'));
+      await tester.pumpAndSettle();
+      expect(find.text('Theme'), findsOneWidget);
+      await tester.scrollUntilVisible(
+        find.text('Daily goal'),
+        200,
+        scrollable: find.byType(Scrollable).last,
+      );
+      expect(find.text('Daily goal'), findsOneWidget);
+    });
+
+    testWidgets('Flashcards: built-in deck, new deck, add a card, study it', (
+      tester,
+    ) async {
+      await pumpApp(tester);
+
+      await tapTab(tester, 'Flashcards');
+      expect(find.text('Mined phrases'), findsOneWidget);
+
+      await tester.tap(find.byTooltip('Import deck'));
+      await tester.pumpAndSettle();
+      expect(find.text('Import is coming soon'), findsOneWidget);
+      await tester.tap(find.text('OK'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('New deck'));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Deck name'),
+        'Verbs',
+      );
+      await tester.tap(find.text('Create'));
+      await tester.pumpAndSettle();
+      expect(find.text('Verbs'), findsOneWidget);
+
+      await tester.tap(find.text('Verbs'));
+      await tester.pumpAndSettle();
+      expect(find.widgetWithText(AppBar, 'Verbs'), findsOneWidget);
+
+      await tester.tap(find.text('Add card'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.widgetWithText(TextField, 'Front'), '食べる');
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Back (optional)'),
+        'to eat',
+      );
+      await tester.tap(find.text('Save card'));
+      await tester.pumpAndSettle();
+      expect(find.text('食べる'), findsOneWidget);
+
+      await tester.tap(find.text('Study 1 now'));
+      await tester.pumpAndSettle();
+      expect(find.text('食べる'), findsOneWidget);
+      await tester.tap(find.text('Show answer'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Good'));
+      await tester.pumpAndSettle();
+      expect(find.text('Session complete'), findsOneWidget);
+    });
+  });
+
+  testWidgets('every tab and study page fits a phone viewport', (tester) async {
+    tester.view.physicalSize = const Size(360, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await pumpApp(tester);
+    for (final tab in ['Library', 'Flashcards', 'Profile']) {
+      await tapTab(tester, tab);
+      expect(tester.takeException(), isNull, reason: tab);
+    }
+
+    for (final destination in LearnDestination.values) {
+      await openLearn(tester, destination.label);
+      expect(tester.takeException(), isNull, reason: destination.label);
+    }
+
+    for (final route in [
+      '/vocabulary',
+      '/sentences',
+      '/dialogues/lesson-1',
+      '/flashcards/deck/mined-phrases',
+    ]) {
+      GoRouter.of(tester.element(find.byType(NavigationBar))).push(route);
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull, reason: route);
+      await tester.tap(find.byType(BackButton));
+      await tester.pumpAndSettle();
+    }
+  });
+
+  group('add content', () {
+    testWidgets('the home Add dropdown lists every type, podcast disabled', (
+      tester,
+    ) async {
+      await pumpApp(tester);
+
+      await tester.tap(find.text('Add'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('YouTube video'), findsOneWidget);
+      expect(find.text('Podcast'), findsOneWidget);
+      expect(find.text('Soon'), findsOneWidget);
+      final podcast = tester.widget<MenuItemButton>(
+        find.ancestor(
+          of: find.text('Podcast'),
+          matching: find.byType(MenuItemButton),
+        ),
+      );
+      expect(podcast.onPressed, isNull);
+
+      await tester.tap(find.text('YouTube video'));
+      await tester.pumpAndSettle();
+      expect(find.widgetWithText(AppBar, 'Add Content'), findsOneWidget);
+      expect(find.text('YouTube URL or ID'), findsOneWidget);
+    });
+
+    testWidgets('a pasted dialogue is saved and opens in the reader', (
+      tester,
+    ) async {
+      final container = await pumpApp(tester);
+
+      await tester.tap(find.text('Add'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Dialogue'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('YouTube URL or ID'), findsNothing);
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Title'),
+        'My morning',
+      );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Japanese text'),
+        'Aiko: おはよう\nKen: こんにちは',
+      );
+      await tester.tap(find.text('Save dialogue'));
+      await tester.pumpAndSettle();
+
+      expect(find.widgetWithText(AppBar, 'My morning'), findsOneWidget);
+      expect(find.text('Aiko'), findsWidgets);
+
+      final listed = await container.read(dialogueListViewModelProvider.future);
+      expect(listed.first.title, 'My morning');
+      expect(listed.map((d) => d.title), contains('At the station'));
+    });
+  });
+
+  group('library', () {
+    testWidgets('category cards switch between videos, podcasts, dialogues', (
+      tester,
+    ) async {
+      await pumpApp(tester);
+      await openLibrary(tester);
+
+      expect(find.text('YouTube video'), findsOneWidget);
+      expect(find.text('Japanese podcasts'), findsOneWidget);
+      expect(find.text('Japanese dialogue'), findsOneWidget);
+      expect(find.text('Your library is empty'), findsOneWidget);
+
+      await tester.tap(find.text('Japanese podcasts'));
+      await tester.pumpAndSettle();
+      expect(find.text('Podcasts are coming soon'), findsOneWidget);
+
+      await tester.tap(find.text('Japanese dialogue'));
+      await tester.pumpAndSettle();
+      expect(find.text('At the station'), findsOneWidget);
+
+      await tester.tap(find.text('At the station'));
+      await tester.pumpAndSettle();
+      expect(find.text('駅'), findsOneWidget);
+      expect(find.byType(BackButton), findsOneWidget);
+    });
+
+    testWidgets('Add Content has a back button that returns to Library', (
+      tester,
+    ) async {
+      await pumpApp(tester);
+      await openLibrary(tester);
 
       await tester.tap(find.text('Add content'));
       await tester.pumpAndSettle();
@@ -162,29 +418,12 @@ void main() {
       expect(find.byType(BackButton), findsNothing);
     });
 
-    testWidgets('podcast and dialogue cards also open Library', (tester) async {
-      await pumpApp(tester);
-
-      await tester.tap(find.text('Japanese podcasts'));
-      await tester.pumpAndSettle();
-      expect(find.widgetWithText(AppBar, 'Library'), findsOneWidget);
-
-      await tester.tap(find.text('Immerse'));
-      await tester.pumpAndSettle();
-      await tester.drag(find.byType(CustomScrollView), const Offset(0, -240));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Japanese dialogue'));
-      await tester.pumpAndSettle();
-      expect(find.widgetWithText(AppBar, 'Library'), findsOneWidget);
-    });
-
     testWidgets('system back from Add Content returns to Library', (
       tester,
     ) async {
       await pumpApp(tester);
+      await openLibrary(tester);
 
-      await tester.tap(find.text('YouTube video'));
-      await tester.pumpAndSettle();
       await tester.tap(find.text('Add content'));
       await tester.pumpAndSettle();
       expect(find.widgetWithText(AppBar, 'Add Content'), findsOneWidget);
@@ -195,26 +434,6 @@ void main() {
       expect(exitCalls(), isEmpty);
       expect(find.text(DoubleBackToExit.message), findsNothing);
     });
-  });
-
-  testWidgets('Library filter shows dialogues and opens the reader', (
-    tester,
-  ) async {
-    await pumpApp(tester);
-
-    await tester.tap(find.text('Library').last);
-    await tester.pumpAndSettle();
-    expect(find.text('Videos'), findsOneWidget);
-    expect(find.text('Dialogues'), findsOneWidget);
-
-    await tester.tap(find.text('Dialogues'));
-    await tester.pumpAndSettle();
-    expect(find.text('At the station'), findsOneWidget);
-
-    await tester.tap(find.text('At the station'));
-    await tester.pumpAndSettle();
-    expect(find.text('駅'), findsOneWidget);
-    expect(find.byType(BackButton), findsOneWidget);
   });
 
   group('double back to exit', () {

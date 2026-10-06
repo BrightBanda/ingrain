@@ -1,22 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ingrain/app/theme/app_colors.dart';
 import 'package:ingrain/features/settings/domain/app_settings.dart';
 import 'package:ingrain/features/settings/presentation/viewmodel/settings_view_model.dart';
+import 'package:ingrain/shared/widgets/colorful.dart';
 
-class SettingsView extends ConsumerWidget {
-  const SettingsView({super.key});
+/// App settings, shown on the Profile tab.
+class SettingsPanel extends ConsumerWidget {
+  const SettingsPanel({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final uiState = ref.watch(settingsViewModelProvider);
-
-    return Scaffold(
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        title: const Text('Settings'),
-      ),
-      body: builderForState(uiState, context, ref),
-    );
+    return builderForState(ref.watch(settingsViewModelProvider), context, ref);
   }
 
   Widget builderForState(
@@ -44,20 +39,36 @@ class SettingsView extends ConsumerWidget {
   ) {
     final vm = ref.read(settingsViewModelProvider.notifier);
     final theme = Theme.of(context);
+    const appearance = AppColors.primaryMain;
+    const playback = appearance;
+    const goals = appearance;
+    const about = appearance;
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
       children: [
         _Section(
           title: 'Appearance',
+          color: appearance,
           children: [
-            ListTile(
-              leading: const Icon(Icons.brightness_6_outlined),
-              title: const Text('Theme'),
+            const ListTile(
+              leading: IconBadge(
+                color: appearance,
+                icon: Icons.brightness_6_outlined,
+                size: 38,
+              ),
+              title: Text('Theme'),
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
               child: SegmentedButton<ThemeSetting>(
+                style: SegmentedButton.styleFrom(
+                  side: BorderSide.none,
+                  backgroundColor: appearance.withValues(alpha: 0.1),
+                  foregroundColor: appearance,
+                  selectedBackgroundColor: appearance,
+                  selectedForegroundColor: Colors.white,
+                ),
                 segments: const [
                   ButtonSegment(
                     value: ThemeSetting.system,
@@ -82,6 +93,7 @@ class SettingsView extends ConsumerWidget {
               ),
             ),
             _SliderTile(
+              color: appearance,
               icon: Icons.format_size_outlined,
               label: 'Subtitle font size',
               value: settings.subtitleFontSize,
@@ -92,7 +104,12 @@ class SettingsView extends ConsumerWidget {
               valueFormatter: (v) => '${v.toStringAsFixed(0)} pt',
             ),
             SwitchListTile(
-              secondary: const Icon(Icons.translate_outlined),
+              secondary: const IconBadge(
+                color: appearance,
+                icon: Icons.translate_outlined,
+                size: 38,
+              ),
+              activeTrackColor: appearance,
               title: const Text('Show romaji in dialogues'),
               value: settings.showRomaji,
               onChanged: vm.setShowRomaji,
@@ -101,8 +118,10 @@ class SettingsView extends ConsumerWidget {
         ),
         _Section(
           title: 'Playback',
+          color: playback,
           children: [
             _SliderTile(
+              color: playback,
               icon: Icons.speed_outlined,
               label: 'Playback speed',
               value: settings.playbackSpeed,
@@ -116,15 +135,19 @@ class SettingsView extends ConsumerWidget {
         ),
         _Section(
           title: 'Goals',
+          color: goals,
           children: [
             ListTile(
-              leading: const Icon(Icons.flag_outlined),
+              leading: const IconBadge(
+                color: goals,
+                icon: Icons.flag_outlined,
+                size: 38,
+              ),
               title: const Text('Daily goal'),
-              trailing: Text(
-                '${settings.dailyGoalMinutes} min',
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
+              trailing: Pill(
+                label: '${settings.dailyGoalMinutes} min',
+                color: goals,
+                solid: true,
               ),
               onTap: () =>
                   _showGoalDialog(context, ref, settings.dailyGoalMinutes),
@@ -133,9 +156,14 @@ class SettingsView extends ConsumerWidget {
         ),
         _Section(
           title: 'About',
+          color: about,
           children: [
             ListTile(
-              leading: const Icon(Icons.menu_book_outlined),
+              leading: const IconBadge(
+                color: about,
+                icon: Icons.menu_book_outlined,
+                size: 38,
+              ),
               title: const Text('Dictionary attribution'),
               subtitle: const Text('JMdict/EDICT (CC BY-SA 4.0)'),
               onTap: () {
@@ -158,10 +186,14 @@ class SettingsView extends ConsumerWidget {
                 );
               },
             ),
-            const ListTile(
-              leading: Icon(Icons.verified_outlined),
-              title: Text('Version'),
-              trailing: Text('1.0.0+1'),
+            ListTile(
+              leading: const IconBadge(
+                color: about,
+                icon: Icons.verified_outlined,
+                size: 38,
+              ),
+              title: const Text('Version'),
+              trailing: Text('1.0.0+1', style: theme.textTheme.bodyMedium),
             ),
           ],
         ),
@@ -203,12 +235,17 @@ class SettingsView extends ConsumerWidget {
   }
 }
 
-/// A grouped settings card: hairline-outlined surface with a caption header.
+/// A grouped settings card with a caption header in the section's colour.
 class _Section extends StatelessWidget {
   final String title;
+  final Color color;
   final List<Widget> children;
 
-  const _Section({required this.title, required this.children});
+  const _Section({
+    required this.title,
+    required this.color,
+    required this.children,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -224,7 +261,7 @@ class _Section extends StatelessWidget {
               title.toUpperCase(),
               style: theme.textTheme.labelLarge?.copyWith(
                 fontSize: 12,
-                color: theme.colorScheme.primary,
+                color: color,
                 letterSpacing: 0.8,
               ),
             ),
@@ -237,6 +274,7 @@ class _Section extends StatelessWidget {
 }
 
 class _SliderTile extends StatelessWidget {
+  final Color color;
   final IconData icon;
   final String label;
   final double value;
@@ -247,6 +285,7 @@ class _SliderTile extends StatelessWidget {
   final String Function(double) valueFormatter;
 
   const _SliderTile({
+    required this.color,
     required this.icon,
     required this.label,
     required this.value,
@@ -267,7 +306,7 @@ class _SliderTile extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(icon, size: 20, color: theme.colorScheme.primary),
+              IconBadge(color: color, icon: icon, size: 38),
               const SizedBox(width: 16),
               Expanded(child: Text(label, style: theme.textTheme.bodyLarge)),
               Text(
@@ -279,6 +318,8 @@ class _SliderTile extends StatelessWidget {
             ],
           ),
           Slider(
+            activeColor: color,
+            inactiveColor: color.withValues(alpha: 0.18),
             value: value,
             min: min,
             max: max,

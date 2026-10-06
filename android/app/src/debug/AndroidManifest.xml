@@ -4,4 +4,7 @@
          to allow setting breakpoints, to provide hot reload, etc.
     -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Debug builds talk to the local dialogue API over plain http
+         (API_BASE_URL). Release builds keep Android's HTTPS-only default. -->
+    <application android:usesCleartextTraffic="true" />
 </manifest>

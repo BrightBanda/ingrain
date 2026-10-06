@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:ingrain/app/theme/app_colors.dart';
+import 'package:ingrain/features/content/presentation/view/add_content_type.dart';
 import 'package:ingrain/features/dialogue/domain/dialogue.dart';
 import 'package:ingrain/features/dialogue/presentation/viewmodel/dialogue_providers.dart';
+import 'package:ingrain/shared/widgets/colorful.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 const nhkEasyJapaneseUrl =
@@ -23,12 +26,18 @@ class LibraryDialogueListView extends ConsumerWidget {
           Expanded(
             child: items.isEmpty
                 ? _EmptyDialogues(onBrowse: () => _openNhk(context))
-                : ListView.separated(
+                : GridView.builder(
                     padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          mainAxisSpacing: 10,
+                          crossAxisSpacing: 10,
+                          mainAxisExtent: 136,
+                        ),
                     itemCount: items.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: 10),
                     itemBuilder: (context, index) =>
-                        _DialogueSummaryCard(dialogue: items[index]),
+                        DialogueSummaryCard(dialogue: items[index]),
                   ),
           ),
         ],
@@ -61,38 +70,71 @@ class LibraryDialogueListView extends ConsumerWidget {
   }
 }
 
-class _DialogueSummaryCard extends StatelessWidget {
+/// A dialogue in the catalogue, sized for a two-column grid.
+class DialogueSummaryCard extends StatelessWidget {
   final DialogueSummary dialogue;
 
-  const _DialogueSummaryCard({required this.dialogue});
+  const DialogueSummaryCard({super.key, required this.dialogue});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isStory = dialogue.kind == DialogueKind.story;
+    const accent = AppColors.primaryMain;
+
     return Card(
+      margin: EdgeInsets.zero,
+      color: accent.withValues(alpha: 0.1),
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: () => context.push('/dialogues/${dialogue.id}'),
         child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Row(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(Icons.forum_outlined, color: theme.colorScheme.primary),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(dialogue.title, style: theme.textTheme.titleMedium),
-                    const SizedBox(height: 4),
-                    Text(
-                      '${dialogue.level}  ·  ${dialogue.lineCount} lines'
-                      '${dialogue.source.attribution == null ? '' : '  ·  ${dialogue.source.attribution}'}',
-                      style: theme.textTheme.bodySmall,
+              Row(
+                children: [
+                  Icon(
+                    isStory ? Icons.menu_book_outlined : Icons.forum_outlined,
+                    color: accent,
+                    size: 20,
+                  ),
+                  const Spacer(),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
                     ),
-                  ],
+                    decoration: BoxDecoration(
+                      color: accent,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(
+                      dialogue.level,
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Expanded(
+                child: Text(
+                  dialogue.title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.titleMedium?.copyWith(fontSize: 15),
                 ),
               ),
-              const Icon(Icons.chevron_right),
+              Text(
+                '${isStory ? 'Story' : 'Dialogue'}  ·  '
+                '${dialogue.lineCount} lines',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.bodySmall,
+              ),
             ],
           ),
         ),
@@ -107,26 +149,28 @@ class _EmptyDialogues extends StatelessWidget {
   const _EmptyDialogues({required this.onBrowse});
 
   @override
-  Widget build(BuildContext context) => Center(
-    child: Padding(
-      padding: const EdgeInsets.all(28),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.forum_outlined, size: 42),
-          const SizedBox(height: 14),
-          Text(
-            'No dialogues available',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: 12),
-          OutlinedButton.icon(
-            onPressed: onBrowse,
-            icon: const Icon(Icons.open_in_new),
-            label: const Text('Browse NHK dialogues'),
-          ),
-        ],
-      ),
+  Widget build(BuildContext context) => EmptyState(
+    icon: Icons.forum,
+    color: AppColors.primaryMain,
+    title: 'No dialogues available',
+    message: 'Write your own, or browse NHK Easy Japanese.',
+    action: Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      alignment: WrapAlignment.center,
+      children: [
+        FilledButton.icon(
+          style: accentButtonStyle(AppColors.primaryMain),
+          onPressed: () => context.push(AddContentType.dialogue.route),
+          icon: const Icon(Icons.edit),
+          label: const Text('Write a dialogue'),
+        ),
+        OutlinedButton.icon(
+          onPressed: onBrowse,
+          icon: const Icon(Icons.open_in_new),
+          label: const Text('Browse NHK dialogues'),
+        ),
+      ],
     ),
   );
 }
@@ -143,33 +187,27 @@ class _DialogueLoadError extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) => Center(
-    child: Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Text('Could not load dialogues'),
-          const SizedBox(height: 4),
-          Text(message, maxLines: 3, overflow: TextOverflow.ellipsis),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            children: [
-              FilledButton.icon(
-                onPressed: onRetry,
-                icon: const Icon(Icons.refresh),
-                label: const Text('Retry'),
-              ),
-              OutlinedButton.icon(
-                onPressed: onBrowse,
-                icon: const Icon(Icons.open_in_new),
-                label: const Text('Browse NHK'),
-              ),
-            ],
-          ),
-        ],
-      ),
+  Widget build(BuildContext context) => EmptyState(
+    icon: Icons.cloud_off,
+    color: AppColors.primaryMain,
+    title: 'Could not load dialogues',
+    message: message,
+    action: Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      alignment: WrapAlignment.center,
+      children: [
+        FilledButton.icon(
+          onPressed: onRetry,
+          icon: const Icon(Icons.refresh),
+          label: const Text('Retry'),
+        ),
+        OutlinedButton.icon(
+          onPressed: onBrowse,
+          icon: const Icon(Icons.open_in_new),
+          label: const Text('Browse NHK'),
+        ),
+      ],
     ),
   );
 }

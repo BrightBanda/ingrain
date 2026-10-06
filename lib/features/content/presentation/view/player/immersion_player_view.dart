@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:ingrain/app/theme/app_colors.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:youtube_player_iframe/youtube_player_iframe.dart';
 import 'package:ingrain/core/utils/duration_format.dart';
@@ -382,9 +383,6 @@ class _ImmersionPlayerViewState extends ConsumerState<ImmersionPlayerView> {
       decoration: BoxDecoration(
         color: theme.colorScheme.error.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: theme.colorScheme.error.withValues(alpha: 0.25),
-        ),
       ),
       child: Row(
         children: [
@@ -463,7 +461,6 @@ class _ImmersionPlayerViewState extends ConsumerState<ImmersionPlayerView> {
     SessionUiState sessionState,
     ImmersionSessionViewModel sessionVm,
   ) {
-    final theme = Theme.of(context);
     final title = contentAsync.whenOrNull(data: (c) => c.title) ?? 'Loading...';
 
     return Padding(
@@ -475,7 +472,7 @@ class _ImmersionPlayerViewState extends ConsumerState<ImmersionPlayerView> {
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
-              color: theme.colorScheme.primary,
+              color: AppColors.primaryMain,
             ),
           ),
           const SizedBox(width: 16),

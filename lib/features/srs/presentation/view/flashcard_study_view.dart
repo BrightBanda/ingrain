@@ -1,59 +1,50 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:ingrain/features/progress/presentation/viewmodel/progress_view_model.dart';
 import 'package:ingrain/features/srs/domain/review_card.dart';
 import 'package:ingrain/features/srs/presentation/viewmodel/review_view_model.dart';
+import 'package:ingrain/shared/widgets/colorful.dart';
 
-class ReviewTabView extends ConsumerStatefulWidget {
-  const ReviewTabView({super.key});
+/// Studies the due cards of one deck, or of every deck when [deckId] is null.
+class FlashcardStudyView extends ConsumerStatefulWidget {
+  final String? deckId;
+  final String? title;
+
+  const FlashcardStudyView({super.key, this.deckId, this.title});
 
   @override
-  ConsumerState<ReviewTabView> createState() => _ReviewTabViewState();
+  ConsumerState<FlashcardStudyView> createState() => _FlashcardStudyViewState();
 }
 
-class _ReviewTabViewState extends ConsumerState<ReviewTabView> {
+class _FlashcardStudyViewState extends ConsumerState<FlashcardStudyView> {
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(reviewViewModelProvider.notifier).startSession();
+      ref
+          .read(reviewViewModelProvider.notifier)
+          .startSession(deckId: widget.deckId);
     });
   }
 
   @override
   Widget build(BuildContext context) {
     final session = ref.watch(reviewViewModelProvider);
-    final dueCount = ref.watch(dueCountProvider).asData?.value;
-    final theme = Theme.of(context);
+    final remaining = session.isLoading
+        ? 0
+        : session.total - session.currentIndex;
 
     return Scaffold(
       appBar: AppBar(
-        automaticallyImplyLeading: false,
-        title: const Text('Review'),
+        title: Text(widget.title ?? 'Study'),
         actions: [
-          if (dueCount != null && dueCount > 0)
+          if (remaining > 0)
             Center(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.primary.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Text(
-                    '$dueCount due',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: theme.colorScheme.primary,
-                    ),
-                  ),
-                ),
+              child: Pill(
+                label: '$remaining due',
+                color: Theme.of(context).colorScheme.primary,
+                icon: Icons.style,
+                solid: true,
               ),
             ),
           IconButton(
@@ -89,15 +80,8 @@ class _ReviewTabViewState extends ConsumerState<ReviewTabView> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(
-                  card.promptText,
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontSize: 26,
-                    height: 1.5,
-                  ),
-                ),
-                const SizedBox(height: 24),
+                _PromptCard(card: card),
+                const SizedBox(height: 20),
                 if (session.answerShown)
                   _AnswerPanel(answerText: card.answerText, card: card)
                 else
@@ -126,87 +110,82 @@ class _ReviewTabViewState extends ConsumerState<ReviewTabView> {
   Future<void> _submit(Rating rating) async {
     await ref.read(reviewViewModelProvider.notifier).submitAnswer(rating);
     ref.invalidate(dueCountProvider);
+    ref.invalidate(deckSummariesProvider);
+    ref.invalidate(deckDetailProvider);
     ref.invalidate(progressViewModelProvider);
   }
 
   Widget _buildEmpty() {
-    final theme = Theme.of(context);
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 88,
-              height: 88,
-              decoration: BoxDecoration(
-                color: theme.colorScheme.primary.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.check_circle_outline,
-                size: 44,
-                color: theme.colorScheme.primary,
-              ),
-            ),
-            const SizedBox(height: 20),
-            Text('All caught up', style: theme.textTheme.headlineSmall),
-            const SizedBox(height: 8),
-            Text(
-              'No sentences are due right now. Save lines while you immerse '
-              'and they will queue up here.',
-              textAlign: TextAlign.center,
-              style: theme.textTheme.bodyMedium,
-            ),
-          ],
-        ),
-      ),
+    return EmptyState(
+      icon: Icons.check_rounded,
+      color: Theme.of(context).colorScheme.primary,
+      title: 'All caught up',
+      message:
+          'Nothing is due right now. Save lines while you immerse, or add '
+          'cards to a deck, and they will queue up here.',
     );
   }
 
   Widget _buildComplete(ReviewSessionState session) {
-    final theme = Theme.of(context);
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 88,
-              height: 88,
-              decoration: BoxDecoration(
-                color: theme.colorScheme.primary.withValues(alpha: 0.12),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.celebration_outlined,
-                size: 44,
-                color: theme.colorScheme.primary,
-              ),
-            ),
-            const SizedBox(height: 20),
-            Text('Session complete', style: theme.textTheme.headlineSmall),
-            const SizedBox(height: 8),
-            Text(
-              '${session.reviewedThisSession} reviewed',
-              style: theme.textTheme.bodyMedium,
-            ),
-            const SizedBox(height: 24),
-            FilledButton.icon(
-              onPressed: () =>
-                  ref.read(reviewViewModelProvider.notifier).refreshDue(),
-              icon: const Icon(Icons.refresh),
-              label: const Text('Check for more'),
-            ),
+    return EmptyState(
+      icon: Icons.celebration,
+      color: Theme.of(context).colorScheme.primary,
+      title: 'Session complete',
+      message: '${session.reviewedThisSession} reviewed',
+      action: Column(
+        children: [
+          FilledButton.icon(
+            onPressed: () =>
+                ref.read(reviewViewModelProvider.notifier).refreshDue(),
+            icon: const Icon(Icons.refresh),
+            label: const Text('Check for more'),
+          ),
+          if (Navigator.of(context).canPop()) ...[
             const SizedBox(height: 8),
             TextButton(
-              onPressed: () => context.push('/sentences'),
-              child: const Text('Browse mined sentences'),
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Back to decks'),
             ),
           ],
-        ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The flashcard face: what to recall, on the hero gradient.
+class _PromptCard extends StatelessWidget {
+  final ReviewCard card;
+
+  const _PromptCard({required this.card});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final (label, icon) = switch (card.cardType) {
+      CardType.vocabulary => ('Word', Icons.translate),
+      CardType.sentence => ('Sentence', Icons.format_quote),
+      CardType.basic => ('Card', Icons.style),
+    };
+    return GradientPanel(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+      child: Column(
+        children: [
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Pill(label: label, icon: icon, color: Colors.white),
+          ),
+          const SizedBox(height: 20),
+          Text(
+            card.promptText,
+            textAlign: TextAlign.center,
+            style: theme.textTheme.headlineSmall?.copyWith(
+              fontSize: 26,
+              height: 1.5,
+              color: Colors.white,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -226,6 +205,7 @@ class _ProgressHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final primary = theme.colorScheme.primary;
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
       child: Row(
@@ -236,20 +216,13 @@ class _ProgressHeader extends StatelessWidget {
               child: LinearProgressIndicator(
                 value: progress,
                 minHeight: 6,
-                backgroundColor: theme.colorScheme.primary.withValues(
-                  alpha: 0.12,
-                ),
-                valueColor: AlwaysStoppedAnimation<Color>(
-                  theme.colorScheme.primary,
-                ),
+                backgroundColor: primary.withValues(alpha: 0.14),
+                valueColor: AlwaysStoppedAnimation<Color>(primary),
               ),
             ),
           ),
           const SizedBox(width: 12),
-          Text(
-            '$index / $total',
-            style: theme.textTheme.bodySmall,
-          ),
+          Text('$index / $total', style: theme.textTheme.bodySmall),
         ],
       ),
     );
@@ -265,16 +238,9 @@ class _AnswerPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.primary.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: theme.colorScheme.primary.withValues(alpha: 0.2),
-        ),
-      ),
+    return TintedSurface(
+      color: theme.colorScheme.primary,
+      alpha: 0.1,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -289,7 +255,7 @@ class _AnswerPanel extends StatelessWidget {
             )
           else
             Text(
-              'No answer saved for this sentence. Recall the meaning, then '
+              'No answer saved for this card. Recall the meaning, then '
               'rate yourself.',
               style: theme.textTheme.bodyMedium,
             ),
@@ -314,31 +280,38 @@ class _RatingBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    // Only "Again" stands out; the rest share the brand colour, strongest for
+    // the answer that pushes the card furthest away.
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
         children: [
           _RatingButton(
             label: 'Again',
-            color: Theme.of(context).colorScheme.error,
+            color: scheme.error,
+            alpha: 0.14,
             onPressed: () => onRate(Rating.again),
             intervalLabel: _label(Rating.again),
           ),
           _RatingButton(
             label: 'Hard',
-            color: Colors.orange.shade700,
+            color: scheme.primary,
+            alpha: 0.1,
             onPressed: () => onRate(Rating.hard),
             intervalLabel: _label(Rating.hard),
           ),
           _RatingButton(
             label: 'Good',
-            color: Theme.of(context).colorScheme.primary,
+            color: scheme.primary,
+            alpha: 0.18,
             onPressed: () => onRate(Rating.good),
             intervalLabel: _label(Rating.good),
           ),
           _RatingButton(
             label: 'Easy',
-            color: Colors.green.shade700,
+            color: scheme.primary,
+            alpha: 0.26,
             onPressed: () => onRate(Rating.easy),
             intervalLabel: _label(Rating.easy),
           ),
@@ -358,12 +331,14 @@ class _RatingButton extends StatelessWidget {
   final String label;
   final String intervalLabel;
   final Color color;
+  final double alpha;
   final VoidCallback onPressed;
 
   const _RatingButton({
     required this.label,
     required this.intervalLabel,
     required this.color,
+    required this.alpha,
     required this.onPressed,
   });
 
@@ -376,9 +351,9 @@ class _RatingButton extends StatelessWidget {
           onPressed: onPressed,
           style: OutlinedButton.styleFrom(
             foregroundColor: color,
-            side: BorderSide(color: color.withValues(alpha: 0.6)),
-            backgroundColor: color.withValues(alpha: 0.06),
-            padding: const EdgeInsets.symmetric(vertical: 10),
+            side: BorderSide.none,
+            backgroundColor: color.withValues(alpha: alpha),
+            padding: const EdgeInsets.symmetric(vertical: 12),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),

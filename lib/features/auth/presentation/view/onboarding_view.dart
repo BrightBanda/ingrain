@@ -2,9 +2,11 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ingrain/app/theme/app_colors.dart';
 import 'package:ingrain/features/auth/presentation/viewmodel/auth_view_model.dart';
 import 'package:ingrain/features/settings/domain/app_settings.dart';
 import 'package:ingrain/features/settings/presentation/viewmodel/settings_view_model.dart';
+import 'package:ingrain/shared/widgets/colorful.dart';
 import 'package:ingrain/shared/widgets/double_back_to_exit.dart';
 
 /// Doubles as the sign-in screen and the display-name step.
@@ -146,6 +148,29 @@ class _OnboardingViewState extends ConsumerState<OnboardingView> {
             textAlign: TextAlign.center,
             style: theme.textTheme.bodyMedium,
           ),
+          const SizedBox(height: 16),
+          const Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              Pill(
+                label: 'Videos',
+                icon: Icons.smart_display,
+                color: AppColors.primaryMain,
+              ),
+              Pill(
+                label: 'Dialogues',
+                icon: Icons.forum,
+                color: AppColors.primaryMain,
+              ),
+              Pill(
+                label: 'Reviews',
+                icon: Icons.school,
+                color: AppColors.primaryMain,
+              ),
+            ],
+          ),
           const SizedBox(height: 24),
           FilledButton.icon(
             onPressed: _busy ? null : () => _run(authVm.signInWithGoogle),
@@ -286,19 +311,12 @@ class _OnboardingViewState extends ConsumerState<OnboardingView> {
       width: 96,
       height: 96,
       decoration: BoxDecoration(
-        gradient: LinearGradient(
+        gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [theme.colorScheme.primary, theme.colorScheme.tertiary],
+          colors: AppColors.heroGradient,
         ),
         borderRadius: BorderRadius.circular(28),
-        boxShadow: [
-          BoxShadow(
-            color: theme.colorScheme.primary.withValues(alpha: 0.3),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
       ),
       child: const Icon(Icons.spa, size: 48, color: Colors.white),
     );

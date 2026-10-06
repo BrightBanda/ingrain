@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:ingrain/app/theme/app_colors.dart';
+import 'package:ingrain/shared/widgets/colorful.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ingrain/features/vocabulary/presentation/viewmodel/vocabulary_view_model.dart';
 
@@ -160,7 +162,6 @@ class _VocabularySaveSheetState extends State<VocabularySaveSheet> {
                 style: const TextStyle(fontSize: 20),
                 decoration: InputDecoration(
                   labelText: 'Word',
-                  border: const OutlineInputBorder(),
                   helperText: widget.wordEditable
                       ? 'Required'
                       : 'Taken from the transcript',
@@ -172,8 +173,7 @@ class _VocabularySaveSheetState extends State<VocabularySaveSheet> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primary
-                        .withValues(alpha: 0.08),
+                    color: AppColors.primaryMain.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
@@ -186,20 +186,14 @@ class _VocabularySaveSheetState extends State<VocabularySaveSheet> {
               const SizedBox(height: 12),
               TextField(
                 controller: _readingController,
-                decoration: const InputDecoration(
-                  labelText: 'Reading (kana)',
-                  border: OutlineInputBorder(),
-                ),
+                decoration: const InputDecoration(labelText: 'Reading (kana)'),
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: _meaningController,
                 minLines: 1,
                 maxLines: 4,
-                decoration: const InputDecoration(
-                  labelText: 'Meaning',
-                  border: OutlineInputBorder(),
-                ),
+                decoration: const InputDecoration(labelText: 'Meaning'),
               ),
               if (_errorText != null) ...[
                 const SizedBox(height: 12),
@@ -210,6 +204,7 @@ class _VocabularySaveSheetState extends State<VocabularySaveSheet> {
               ],
               const SizedBox(height: 20),
               FilledButton.icon(
+                style: accentButtonStyle(AppColors.primaryMain),
                 onPressed: _submit,
                 icon: const Icon(Icons.bookmark_add),
                 label: const Text('Save word'),

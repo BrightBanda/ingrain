@@ -78,6 +78,7 @@ flutter:
   assets:
     - assets/data/dictionary.json
     - assets/data/sample_content.json
+    - assets/data/sample_dialogues.json
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

@@ -7,20 +7,22 @@ abstract final class AppTheme {
 
   static ThemeData _base(Brightness brightness) {
     final isLight = brightness == Brightness.light;
-    final scheme = ColorScheme.fromSeed(
-      seedColor: AppColors.primaryMain,
-      brightness: brightness,
-    ).copyWith(
-      primary: isLight ? AppColors.primaryMain : AppColors.primaryLight,
-      onPrimary: isLight ? Colors.white : AppColors.primaryDark,
-      secondary: AppColors.primaryMain,
-      surface: isLight ? AppColors.surface : AppColors.surfaceDark,
-      onSurface: isLight ? AppColors.textPrimary : const Color(0xFFE3E8F0),
-      error: AppColors.error,
-      outlineVariant: isLight
-          ? AppColors.outlineLight
-          : AppColors.outlineDark,
-    );
+    final scheme =
+        ColorScheme.fromSeed(
+          seedColor: AppColors.primaryMain,
+          brightness: brightness,
+        ).copyWith(
+          primary: isLight ? AppColors.primaryMain : AppColors.primaryLight,
+          onPrimary: isLight ? Colors.white : AppColors.primaryDark,
+          secondary: AppColors.podcast,
+          tertiary: AppColors.dialogue,
+          surface: isLight ? AppColors.surface : AppColors.surfaceDark,
+          onSurface: isLight ? AppColors.textPrimary : const Color(0xFFE3E8F0),
+          error: AppColors.error,
+          outlineVariant: isLight
+              ? AppColors.outlineLight
+              : AppColors.outlineDark,
+        );
 
     final backgroundColor = isLight
         ? AppColors.backgroundLight
@@ -59,14 +61,10 @@ abstract final class AppTheme {
           color: onBackground.withValues(alpha: 0.6),
           height: 1.35,
         ),
-        labelLarge: TextStyle(
-          fontWeight: FontWeight.w600,
-          color: onBackground,
-        ),
+        labelLarge: TextStyle(fontWeight: FontWeight.w600, color: onBackground),
       ),
       appBarTheme: AppBarTheme(
-        // App bars blend into the canvas; elevation comes from a hairline
-        // bottom border instead of a shadow so the look stays flat and calm.
+        // App bars blend into the canvas with no shadow or hairline.
         backgroundColor: backgroundColor,
         foregroundColor: onBackground,
         elevation: 0,
@@ -84,10 +82,7 @@ abstract final class AppTheme {
         color: scheme.surface,
         margin: EdgeInsets.zero,
         clipBehavior: Clip.antiAlias,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.7)),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       ),
       dividerTheme: DividerThemeData(
         color: scheme.outlineVariant.withValues(alpha: 0.55),
@@ -104,19 +99,23 @@ abstract final class AppTheme {
           return TextStyle(
             fontSize: 11.5,
             fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-            color: selected ? scheme.primary : onBackground.withValues(alpha: 0.6),
+            color: selected
+                ? scheme.primary
+                : onBackground.withValues(alpha: 0.6),
           );
         }),
         iconTheme: WidgetStateProperty.resolveWith((states) {
           final selected = states.contains(WidgetState.selected);
           return IconThemeData(
-            color: selected ? scheme.primary : onBackground.withValues(alpha: 0.6),
+            color: selected
+                ? scheme.primary
+                : onBackground.withValues(alpha: 0.6),
           );
         }),
       ),
       chipTheme: ChipThemeData(
-        backgroundColor: scheme.surface,
-        side: BorderSide(color: scheme.outlineVariant),
+        backgroundColor: scheme.primary.withValues(alpha: 0.1),
+        side: BorderSide.none,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         labelStyle: TextStyle(color: onBackground, fontWeight: FontWeight.w500),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
@@ -129,16 +128,21 @@ abstract final class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: isLight
-            ? Colors.white.withValues(alpha: 0.85)
-            : Colors.white.withValues(alpha: 0.04),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+            ? scheme.primary.withValues(alpha: 0.07)
+            : Colors.white.withValues(alpha: 0.06),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 14,
+          vertical: 14,
+        ),
+        // Borderless fields: the tinted fill marks the field, and only focus
+        // draws a ring so the active input is still obvious.
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: scheme.outlineVariant),
+          borderSide: BorderSide.none,
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: scheme.outlineVariant),
+          borderSide: BorderSide.none,
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -167,7 +171,8 @@ abstract final class AppTheme {
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           minimumSize: const Size(0, 44),
-          side: BorderSide(color: scheme.outlineVariant),
+          side: BorderSide.none,
+          backgroundColor: scheme.primary.withValues(alpha: 0.1),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),

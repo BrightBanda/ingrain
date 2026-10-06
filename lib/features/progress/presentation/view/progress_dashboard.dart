@@ -1,28 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:ingrain/app/theme/app_colors.dart';
 import 'package:ingrain/core/utils/duration_format.dart';
 import 'package:ingrain/features/progress/domain/progress_summary.dart';
 import 'package:ingrain/features/progress/presentation/viewmodel/progress_view_model.dart';
+import 'package:ingrain/shared/widgets/colorful.dart';
 
-class ProgressTabView extends ConsumerWidget {
-  const ProgressTabView({super.key});
+/// The progress and analytics dashboard, shown on the Profile tab.
+class ProgressDashboard extends ConsumerWidget {
+  const ProgressDashboard({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final uiState = ref.watch(progressViewModelProvider);
 
-    return Scaffold(
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        title: const Text('Progress'),
-      ),
-      body: uiState.isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : uiState.error != null
-          ? Center(child: Text('Error: ${uiState.error!.message ?? 'unknown'}'))
-          : _buildDashboard(context, ref, uiState.summary!),
-    );
+    if (uiState.isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (uiState.error != null) {
+      return Center(
+        child: Text('Error: ${uiState.error!.message ?? 'unknown'}'),
+      );
+    }
+    return _buildDashboard(context, ref, uiState.summary!);
   }
 
   Widget _buildDashboard(
@@ -45,19 +46,22 @@ class ProgressTabView extends ConsumerWidget {
           if (summary.dueCount > 0) ...[
             const SizedBox(height: 16),
             FilledButton.icon(
-              onPressed: () => context.go('/review'),
+              style: accentButtonStyle(AppColors.primaryMain),
+              onPressed: () => context.go('/flashcards'),
               icon: const Icon(Icons.school),
               label: Text('Review ${summary.dueCount} due now'),
             ),
           ],
           const SizedBox(height: 8),
           OutlinedButton.icon(
-            onPressed: () => context.push('/vocabulary'),
+            style: _tintedButton(AppColors.primaryMain),
+            onPressed: () => context.go('/learn/vocab'),
             icon: const Icon(Icons.translate),
             label: const Text('Browse saved vocabulary'),
           ),
           const SizedBox(height: 8),
           OutlinedButton.icon(
+            style: _tintedButton(AppColors.primaryMain),
             onPressed: () => context.push('/sentences'),
             icon: const Icon(Icons.bookmark_border),
             label: const Text('Browse mined sentences'),
@@ -79,6 +83,11 @@ class ProgressTabView extends ConsumerWidget {
   }
 }
 
+ButtonStyle _tintedButton(Color color) => OutlinedButton.styleFrom(
+  foregroundColor: color,
+  backgroundColor: color.withValues(alpha: 0.12),
+);
+
 /// Today's immersion against the daily goal, drawn as the dashboard hero.
 class _TodayCard extends StatelessWidget {
   final ProgressSummary summary;
@@ -90,31 +99,8 @@ class _TodayCard extends StatelessWidget {
     final goalReached = summary.todaySeconds >= summary.dailyGoalSeconds;
     final theme = Theme.of(context);
 
-    return Container(
+    return GradientPanel(
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: goalReached
-              ? [
-                  theme.colorScheme.primary.withValues(alpha: 0.9),
-                  theme.colorScheme.tertiary.withValues(alpha: 0.8),
-                ]
-              : [
-                  theme.colorScheme.primary,
-                  theme.colorScheme.primary.withValues(alpha: 0.65),
-                ],
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: theme.colorScheme.primary.withValues(alpha: 0.25),
-            blurRadius: 18,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -190,6 +176,7 @@ class _StatGrid extends StatelessWidget {
               Duration(seconds: summary.weekSeconds),
             ),
             icon: Icons.date_range,
+            accentColor: AppColors.primaryMain,
           ),
         ),
         const SizedBox(width: 12),
@@ -200,6 +187,7 @@ class _StatGrid extends StatelessWidget {
               Duration(seconds: summary.lifetimeSeconds),
             ),
             icon: Icons.history,
+            accentColor: AppColors.primaryMain,
           ),
         ),
         const SizedBox(width: 12),
@@ -208,9 +196,7 @@ class _StatGrid extends StatelessWidget {
             label: 'Streak',
             value: '${summary.currentStreak}d',
             icon: Icons.local_fire_department,
-            accentColor: summary.currentStreak > 0
-                ? const Color(0xFFF59E0B)
-                : null,
+            accentColor: AppColors.primaryMain,
             caption: summary.longestStreak > 0
                 ? 'best ${summary.longestStreak}d'
                 : null,
@@ -241,24 +227,21 @@ class _StatTile extends StatelessWidget {
     final theme = Theme.of(context);
     final accent = accentColor ?? theme.colorScheme.primary;
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+    return TintedSurface(
+      color: accent,
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+      child: SizedBox(
+        width: double.infinity,
         child: Column(
           children: [
-            Container(
-              width: 34,
-              height: 34,
-              decoration: BoxDecoration(
-                color: accent.withValues(alpha: 0.12),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, size: 18, color: accent),
-            ),
+            IconBadge(color: accent, icon: icon, size: 36, solid: true),
             const SizedBox(height: 10),
             Text(
               value,
-              style: theme.textTheme.titleMedium?.copyWith(fontSize: 16),
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontSize: 17,
+                color: accent,
+              ),
             ),
             const SizedBox(height: 2),
             Text(
@@ -353,10 +336,10 @@ class _DayBar extends StatelessWidget {
         if (activity.reviews > 0)
           Text(
             '${activity.reviews}',
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 10,
               fontWeight: FontWeight.w600,
-              color: theme.colorScheme.primary,
+              color: AppColors.primaryMain,
             ),
           ),
         Container(
@@ -364,13 +347,10 @@ class _DayBar extends StatelessWidget {
           margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
           decoration: BoxDecoration(
             gradient: isActive
-                ? LinearGradient(
+                ? const LinearGradient(
                     begin: Alignment.bottomCenter,
                     end: Alignment.topCenter,
-                    colors: [
-                      theme.colorScheme.primary,
-                      theme.colorScheme.primary.withValues(alpha: 0.55),
-                    ],
+                    colors: AppColors.heroGradient,
                   )
                 : null,
             color: isActive
@@ -411,6 +391,7 @@ class _LearningCard extends StatelessWidget {
             const SizedBox(height: 12),
             _LearningRow(
               icon: Icons.bookmark,
+              color: AppColors.primaryMain,
               label: 'Sentences mined',
               value: '${summary.totalSentences}',
               caption: '${summary.sentencesThisWeek} this week',
@@ -418,6 +399,7 @@ class _LearningCard extends StatelessWidget {
             const Divider(height: 20),
             _LearningRow(
               icon: Icons.translate,
+              color: AppColors.primaryMain,
               label: 'Words saved',
               value: '${summary.totalWords}',
               caption: '${summary.wordsLearningOrBetter} learning or better',
@@ -425,12 +407,14 @@ class _LearningCard extends StatelessWidget {
             const Divider(height: 20),
             _LearningRow(
               icon: Icons.pending_actions,
+              color: AppColors.primaryMain,
               label: 'Due for review',
               value: '${summary.dueCount}',
             ),
             const Divider(height: 20),
             _LearningRow(
               icon: Icons.check_circle_outline,
+              color: AppColors.primaryMain,
               label: 'Reviewed today',
               value: '${summary.reviewedToday}',
               caption: '${summary.totalReviews} all time',
@@ -444,12 +428,14 @@ class _LearningCard extends StatelessWidget {
 
 class _LearningRow extends StatelessWidget {
   final IconData icon;
+  final Color color;
   final String label;
   final String value;
   final String? caption;
 
   const _LearningRow({
     required this.icon,
+    required this.color,
     required this.label,
     required this.value,
     this.caption,
@@ -461,15 +447,7 @@ class _LearningRow extends StatelessWidget {
 
     return Row(
       children: [
-        Container(
-          width: 34,
-          height: 34,
-          decoration: BoxDecoration(
-            color: theme.colorScheme.primary.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Icon(icon, size: 18, color: theme.colorScheme.primary),
-        ),
+        IconBadge(color: color, icon: icon, size: 36),
         const SizedBox(width: 12),
         Expanded(
           child: Column(
@@ -483,7 +461,10 @@ class _LearningRow extends StatelessWidget {
         ),
         Text(
           value,
-          style: theme.textTheme.titleMedium?.copyWith(fontSize: 18),
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontSize: 18,
+            color: color,
+          ),
         ),
       ],
     );

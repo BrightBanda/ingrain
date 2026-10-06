@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:ingrain/app/theme/app_colors.dart';
 import 'package:ingrain/features/content/domain/content_item.dart';
+import 'package:ingrain/features/content/presentation/view/add_content_type.dart';
 import 'package:ingrain/features/content/presentation/viewmodel/content_view_model.dart';
 import 'package:ingrain/features/dialogue/presentation/view/library_content_filter.dart';
 import 'package:ingrain/features/dialogue/presentation/view/library_dialogue_list_view.dart';
+import 'package:ingrain/shared/widgets/colorful.dart';
 
 class ContentHistoryView extends ConsumerStatefulWidget {
   const ContentHistoryView({super.key});
@@ -55,16 +58,17 @@ class _ContentHistoryViewState extends ConsumerState<ContentHistoryView> {
             ),
           ),
           Expanded(
-            child: _filter == LibraryContentFilter.dialogues
-                ? const LibraryDialogueListView()
-                : uiState.when(
-                    data: (items) => items.isEmpty
-                        ? _buildEmpty(context)
-                        : _buildList(context, ref, items),
-                    loading: () =>
-                        const Center(child: CircularProgressIndicator()),
-                    error: (e, st) => Center(child: Text('Error: $e')),
-                  ),
+            child: switch (_filter) {
+              LibraryContentFilter.dialogues => const LibraryDialogueListView(),
+              LibraryContentFilter.podcasts => const _PodcastsComingSoon(),
+              LibraryContentFilter.videos => uiState.when(
+                data: (items) => items.isEmpty
+                    ? _buildEmpty(context)
+                    : _buildList(context, ref, items),
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (e, st) => Center(child: Text('Error: $e')),
+              ),
+            },
           ),
         ],
       ),
@@ -72,42 +76,18 @@ class _ContentHistoryViewState extends ConsumerState<ContentHistoryView> {
   }
 
   Widget _buildEmpty(BuildContext context) {
-    final theme = Theme.of(context);
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 88,
-              height: 88,
-              decoration: BoxDecoration(
-                color: theme.colorScheme.primary.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: Icon(
-                Icons.video_library_outlined,
-                size: 44,
-                color: theme.colorScheme.primary,
-              ),
-            ),
-            const SizedBox(height: 20),
-            Text('Your library is empty', style: theme.textTheme.titleLarge),
-            const SizedBox(height: 8),
-            Text(
-              'Every video you add keeps its transcript, progress\nand mined language here.',
-              textAlign: TextAlign.center,
-              style: theme.textTheme.bodyMedium,
-            ),
-            const SizedBox(height: 20),
-            FilledButton.icon(
-              onPressed: () => context.push('/content/add'),
-              icon: const Icon(Icons.add),
-              label: const Text('Add content'),
-            ),
-          ],
-        ),
+    return EmptyState(
+      icon: Icons.smart_display,
+      color: AppColors.primaryMain,
+      title: 'Your library is empty',
+      message:
+          'Every video you add keeps its transcript, progress\nand mined '
+          'language here.',
+      action: FilledButton.icon(
+        style: accentButtonStyle(AppColors.primaryMain),
+        onPressed: () => context.push(AddContentType.youtube.route),
+        icon: const Icon(Icons.add),
+        label: const Text('Add content'),
       ),
     );
   }
@@ -138,12 +118,12 @@ class _ContentHistoryViewState extends ConsumerState<ContentHistoryView> {
                     width: 44,
                     height: 44,
                     decoration: BoxDecoration(
-                      color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                      color: AppColors.primaryMain.withValues(alpha: 0.14),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: Icon(
+                    child: const Icon(
                       Icons.play_circle_fill,
-                      color: theme.colorScheme.primary,
+                      color: AppColors.primaryMain,
                     ),
                   ),
                   const SizedBox(width: 14),
@@ -177,8 +157,8 @@ class _ContentHistoryViewState extends ConsumerState<ContentHistoryView> {
                     ),
                     decoration: BoxDecoration(
                       color: minutes > 0
-                          ? theme.colorScheme.primary.withValues(alpha: 0.1)
-                          : theme.colorScheme.onSurface.withValues(alpha: 0.05),
+                          ? AppColors.primaryMain.withValues(alpha: 0.14)
+                          : theme.colorScheme.onSurface.withValues(alpha: 0.06),
                       borderRadius: BorderRadius.circular(999),
                     ),
                     child: Text(
@@ -186,7 +166,7 @@ class _ContentHistoryViewState extends ConsumerState<ContentHistoryView> {
                       style: theme.textTheme.labelLarge?.copyWith(
                         fontSize: 11,
                         color: minutes > 0
-                            ? theme.colorScheme.primary
+                            ? AppColors.primaryMain
                             : theme.colorScheme.onSurface.withValues(
                                 alpha: 0.6,
                               ),
@@ -201,4 +181,16 @@ class _ContentHistoryViewState extends ConsumerState<ContentHistoryView> {
       },
     );
   }
+}
+
+class _PodcastsComingSoon extends StatelessWidget {
+  const _PodcastsComingSoon();
+
+  @override
+  Widget build(BuildContext context) => const EmptyState(
+    icon: Icons.headphones,
+    color: AppColors.primaryMain,
+    title: 'Podcasts are coming soon',
+    message: 'Until then, try a YouTube video or a dialogue.',
+  );
 }

@@ -1,7 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ingrain/core/storage/local_document_store.dart';
+
 import '../../support/fake_auth_repository.dart';
+
 import 'package:ingrain/features/content/data/local_content_repository.dart';
+import 'package:ingrain/features/content/domain/transcript_sentence.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -52,6 +55,29 @@ void main() {
       );
       expect(item.id, 'dQw4w9WgXcQ');
     });
+
+    test(
+      'watchAll skips transcript documents in the same collection',
+      () async {
+        await repository.create(
+          sourceUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+          title: 'With transcript',
+        );
+        await repository.saveTranscript('dQw4w9WgXcQ', const [
+          TranscriptSentence(
+            index: 0,
+            text: 'こんにちは',
+            startSeconds: 0,
+            endSeconds: 2,
+          ),
+        ]);
+
+        final items = await repository.watchAll().first;
+
+        expect(items.map((item) => item.id), ['dQw4w9WgXcQ']);
+        expect(await repository.getTranscript('dQw4w9WgXcQ'), hasLength(1));
+      },
+    );
 
     test('extracts video ID from bare video ID', () async {
       final item = await repository.create(

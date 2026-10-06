@@ -13,7 +13,7 @@ import 'package:ingrain/features/dialogue/presentation/viewmodel/dialogue_provid
 import 'package:ingrain/features/immersion/domain/immersion_repository.dart';
 import 'package:ingrain/features/immersion/domain/immersion_session.dart';
 import 'package:ingrain/features/immersion/presentation/viewmodel/immersion_session_view_model.dart';
-import 'package:ingrain/features/progress/presentation/view/progress_tab_view.dart';
+import 'package:ingrain/features/progress/presentation/view/progress_dashboard.dart';
 import 'package:ingrain/features/sentence_mining/domain/sentence_item.dart';
 import 'package:ingrain/features/sentence_mining/domain/sentence_repository.dart';
 import 'package:ingrain/features/sentence_mining/presentation/view/sentence_mining_view.dart';
@@ -21,7 +21,7 @@ import 'package:ingrain/features/sentence_mining/presentation/viewmodel/sentence
 import 'package:ingrain/features/srs/domain/review_card.dart';
 import 'package:ingrain/features/srs/domain/review_event.dart';
 import 'package:ingrain/features/srs/domain/review_repository.dart';
-import 'package:ingrain/features/srs/presentation/view/review_tab_view.dart';
+import 'package:ingrain/features/srs/presentation/view/flashcard_study_view.dart';
 import 'package:ingrain/features/srs/presentation/viewmodel/review_view_model.dart';
 import 'package:ingrain/features/vocabulary/domain/dictionary_index.dart';
 import 'package:ingrain/features/vocabulary/domain/vocabulary_item.dart';
@@ -526,13 +526,13 @@ void main() {
     });
   });
 
-  group('ReviewTabView', () {
+  group('FlashcardStudyView', () {
     testWidgets('shows the all caught up state when nothing is due', (
       tester,
     ) async {
-      await pumpScreen(tester, const ReviewTabView());
+      await pumpScreen(tester, const FlashcardStudyView());
 
-      expect(find.text('Review'), findsOneWidget);
+      expect(find.text('Study'), findsOneWidget);
       expect(find.text('All caught up'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
@@ -540,7 +540,11 @@ void main() {
     testWidgets('rates a due card through to the completion summary', (
       tester,
     ) async {
-      await pumpScreen(tester, const ReviewTabView(), cards: [sampleCard()]);
+      await pumpScreen(
+        tester,
+        const FlashcardStudyView(),
+        cards: [sampleCard()],
+      );
 
       expect(find.text('これはテストです。'), findsOneWidget);
       expect(find.text('Show answer'), findsOneWidget);
@@ -668,16 +672,15 @@ void main() {
     });
   });
 
-  group('ProgressTabView', () {
+  group('ProgressDashboard', () {
     Future<void> scrollDashboardDown(WidgetTester tester) async {
       await tester.drag(find.byType(ListView), const Offset(0, -600));
       await tester.pumpAndSettle();
     }
 
     testWidgets('renders the dashboard with no data', (tester) async {
-      await pumpScreen(tester, const ProgressTabView());
+      await pumpScreen(tester, const Scaffold(body: ProgressDashboard()));
 
-      expect(find.text('Progress'), findsOneWidget);
       expect(find.text('Today'), findsOneWidget);
       expect(find.text('Last 7 days'), findsOneWidget);
       expect(find.text('Learning'), findsOneWidget);
@@ -693,7 +696,7 @@ void main() {
     testWidgets('surfaces mined sentences and due reviews', (tester) async {
       await pumpScreen(
         tester,
-        const ProgressTabView(),
+        const Scaffold(body: ProgressDashboard()),
         sentences: [sampleSentence()],
         cards: [sampleCard()],
       );
@@ -710,7 +713,7 @@ void main() {
     testWidgets('counts saved vocabulary', (tester) async {
       await pumpScreen(
         tester,
-        const ProgressTabView(),
+        const Scaffold(body: ProgressDashboard()),
         words: [
           sampleWord(),
           sampleWord(state: VocabState.encountered),

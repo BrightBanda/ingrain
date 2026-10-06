@@ -136,6 +136,7 @@ class LocalReviewRepository implements ReviewRepository {
     return ReviewCardDto(
       id: card.id,
       uid: card.uid,
+      deckId: card.deckId,
       cardType: card.cardType,
       sourceItemId: card.sourceItemId,
       promptText: card.promptText,

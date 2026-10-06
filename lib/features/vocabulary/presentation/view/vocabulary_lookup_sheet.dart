@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:ingrain/app/theme/app_colors.dart';
+import 'package:ingrain/shared/widgets/colorful.dart';
 import 'package:ingrain/features/vocabulary/domain/dictionary_index.dart';
 
 /// Tap-to-look-up sheet (product spec MVP #4).
@@ -46,7 +48,7 @@ class VocabularyLookupSheet extends StatelessWidget {
                       word,
                       style: theme.textTheme.headlineSmall?.copyWith(
                         fontSize: 30,
-                        color: theme.colorScheme.primary,
+                        color: AppColors.primaryMain,
                       ),
                     ),
                   ),
@@ -99,7 +101,7 @@ class VocabularyLookupSheet extends StatelessWidget {
                   width: double.infinity,
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: theme.colorScheme.primary.withValues(alpha: 0.08),
+                    color: AppColors.primaryMain.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
@@ -113,6 +115,7 @@ class VocabularyLookupSheet extends StatelessWidget {
               ],
               const SizedBox(height: 20),
               FilledButton.icon(
+                style: accentButtonStyle(AppColors.primaryMain),
                 onPressed: alreadySaved ? null : onSave,
                 icon: Icon(alreadySaved ? Icons.check : Icons.bookmark_add),
                 label: Text(alreadySaved ? 'Already saved' : 'Save word'),
@@ -143,20 +146,19 @@ class _PosChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Align(
       alignment: Alignment.centerLeft,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
         decoration: BoxDecoration(
-          color: theme.colorScheme.primary.withValues(alpha: 0.1),
+          color: AppColors.primaryMain.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Text(
           label,
           style: TextStyle(
             fontSize: 12,
-            color: theme.colorScheme.primary,
+            color: AppColors.primaryMain,
             fontWeight: FontWeight.w600,
           ),
         ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ingrain/app/theme/app_colors.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ingrain/core/utils/duration_format.dart';
 import 'package:ingrain/features/content/domain/transcript_sentence.dart';
@@ -104,16 +105,9 @@ class _TranscriptViewState extends ConsumerState<TranscriptView> {
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                 decoration: BoxDecoration(
                   color: isCurrent
-                      ? theme.colorScheme.primary.withValues(alpha: 0.08)
+                      ? AppColors.primaryMain.withValues(alpha: 0.14)
                       : Colors.transparent,
                   borderRadius: BorderRadius.circular(10),
-                  border: isCurrent
-                      ? Border.all(
-                          color: theme.colorScheme.primary.withValues(
-                            alpha: 0.25,
-                          ),
-                        )
-                      : null,
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -126,7 +120,7 @@ class _TranscriptViewState extends ConsumerState<TranscriptView> {
                         ),
                         style: TextStyle(
                           color: isCurrent
-                              ? theme.colorScheme.primary
+                              ? AppColors.primaryMain
                               : theme.colorScheme.onSurface.withValues(
                                   alpha: 0.5,
                                 ),
@@ -141,11 +135,11 @@ class _TranscriptViewState extends ConsumerState<TranscriptView> {
                       child: TappableTranscriptText(
                         tokens: tokenizer.tokenize(sentence.text),
                         highlightColor: isCurrent
-                            ? theme.colorScheme.primary
+                            ? AppColors.primaryMain
                             : theme.colorScheme.onSurface,
                         style: TextStyle(
                           color: isCurrent
-                              ? theme.colorScheme.primary
+                              ? AppColors.primaryMain
                               : theme.colorScheme.onSurface,
                           fontWeight: isCurrent
                               ? FontWeight.bold
@@ -163,7 +157,7 @@ class _TranscriptViewState extends ConsumerState<TranscriptView> {
                     ),
                     IconButton(
                       icon: const Icon(Icons.bookmark_add_outlined),
-                      color: theme.colorScheme.primary,
+                      color: AppColors.primaryMain,
                       iconSize: 18,
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(

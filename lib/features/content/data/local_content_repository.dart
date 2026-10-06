@@ -29,8 +29,18 @@ class LocalContentRepository implements ContentRepository {
   Stream<List<ContentItem>> watchAll() async* {
     final uid = await _auth.ensureUid();
     final docs = await _store.listDocs(uid, collection);
-    yield docs.map((d) => ContentItemDto.fromMap(d).toDomain()).toList();
+    yield docs
+        .where(isContentDocument)
+        .map((d) => ContentItemDto.fromMap(d).toDomain())
+        .toList();
   }
+
+  /// `contentHistory` also holds the `<contentId>__transcript` siblings, and
+  /// `listDocs` returns data without ids. A transcript document has no `id`
+  /// field, so that is what tells the two shapes apart.
+  @visibleForTesting
+  static bool isContentDocument(Map<String, dynamic> doc) =>
+      doc['id'] is String && !doc.containsKey('sentences');
 
   @override
   Future<void> save(ContentItem item) async {
@@ -95,7 +105,11 @@ class LocalContentRepository implements ContentRepository {
   @override
   Future<List<TranscriptSentence>> getTranscript(String contentId) async {
     final uid = await _auth.ensureUid();
-    final doc = await _store.getDoc(uid, collection, transcriptDocId(contentId));
+    final doc = await _store.getDoc(
+      uid,
+      collection,
+      transcriptDocId(contentId),
+    );
     final data = doc['sentences'];
     if (data == null || data is! List) return [];
     return data.asMap().entries.map((entry) {

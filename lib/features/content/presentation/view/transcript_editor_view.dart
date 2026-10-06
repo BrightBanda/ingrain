@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ingrain/app/theme/app_colors.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ingrain/features/content/data/transcript_parser.dart';
@@ -45,7 +46,8 @@ class _TranscriptEditorViewState extends ConsumerState<TranscriptEditorView> {
     if (_hasAutoFetched) return;
     _hasAutoFetched = true;
 
-    if (widget.initialTranscript != null && widget.initialTranscript!.isNotEmpty) {
+    if (widget.initialTranscript != null &&
+        widget.initialTranscript!.isNotEmpty) {
       _textController.text = widget.initialTranscript!;
     }
     if (widget.initialDuration != null && widget.initialDuration! > 0) {
@@ -127,7 +129,6 @@ class _TranscriptEditorViewState extends ConsumerState<TranscriptEditorView> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
 
     return Scaffold(
       appBar: AppBar(
@@ -177,26 +178,22 @@ class _TranscriptEditorViewState extends ConsumerState<TranscriptEditorView> {
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
               child: Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.primary.withValues(alpha: 0.08),
+                  color: AppColors.primaryMain.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                    color: theme.colorScheme.primary.withValues(alpha: 0.2),
-                  ),
                 ),
                 child: Row(
                   children: [
-                    Icon(
-                      Icons.auto_awesome,
-                      size: 16,
-                      color: theme.colorScheme.primary,
-                    ),
+                    Icon(Icons.auto_awesome, size: 16, color: AppColors.primaryMain),
                     const SizedBox(width: 8),
                     Text(
                       'Transcript auto-fetched from YouTube',
                       style: TextStyle(
-                        color: theme.colorScheme.primary,
+                        color: AppColors.primaryMain,
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
                       ),
@@ -258,10 +255,7 @@ class _TranscriptEditorViewState extends ConsumerState<TranscriptEditorView> {
         Expanded(
           child: _preview.isEmpty
               ? Center(
-                  child: Text(
-                    'No preview',
-                    style: theme.textTheme.bodyMedium,
-                  ),
+                  child: Text('No preview', style: theme.textTheme.bodyMedium),
                 )
               : ListView.separated(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
@@ -283,14 +277,13 @@ class _TranscriptEditorViewState extends ConsumerState<TranscriptEditorView> {
                                 vertical: 4,
                               ),
                               decoration: BoxDecoration(
-                                color: theme.colorScheme.primary
-                                    .withValues(alpha: 0.1),
+                                color: AppColors.primaryMain.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Text(
                                 '${s.startSeconds}s',
                                 style: TextStyle(
-                                  color: theme.colorScheme.primary,
+                                  color: AppColors.primaryMain,
                                   fontSize: 10,
                                   fontWeight: FontWeight.w600,
                                 ),

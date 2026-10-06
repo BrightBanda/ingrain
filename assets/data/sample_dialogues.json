@@ -1,0 +1,338 @@
+{
+  "dialogues": [
+    {
+      "id": "sample-cafe-01",
+      "title": "Ordering at a Café",
+      "level": "N5",
+      "kind": "dialogue",
+      "attribution": "ingrain sample",
+      "speakers": ["店員", "Yui"],
+      "lines": [
+        {
+          "index": 0,
+          "speaker": "店員",
+          "tokens": [
+            { "surface": "いらっしゃいませ", "reading": "いらっしゃいませ", "romaji": "irasshaimase" },
+            { "surface": "。", "reading": "。", "romaji": "." },
+            { "surface": "ご注文", "reading": "ごちゅうもん", "romaji": "go-chuumon" },
+            { "surface": "は", "reading": "は", "romaji": "wa" },
+            { "surface": "何", "reading": "なん", "romaji": "nan" },
+            { "surface": "ですか", "reading": "ですか", "romaji": "desu ka" },
+            { "surface": "。", "reading": "。", "romaji": "." }
+          ]
+        },
+        {
+          "index": 1,
+          "speaker": "Yui",
+          "tokens": [
+            { "surface": "コーヒー", "reading": "コーヒー", "romaji": "koohii" },
+            { "surface": "を", "reading": "を", "romaji": "o" },
+            { "surface": "一つ", "reading": "ひとつ", "romaji": "hitotsu" },
+            { "surface": "ください", "reading": "ください", "romaji": "kudasai" },
+            { "surface": "。", "reading": "。", "romaji": "." }
+          ]
+        },
+        {
+          "index": 2,
+          "speaker": "店員",
+          "tokens": [
+            { "surface": "ホット", "reading": "ホット", "romaji": "hotto" },
+            { "surface": "と", "reading": "と", "romaji": "to" },
+            { "surface": "アイス", "reading": "アイス", "romaji": "aisu" },
+            { "surface": "、", "reading": "、", "romaji": "," },
+            { "surface": "どちら", "reading": "どちら", "romaji": "dochira" },
+            { "surface": "に", "reading": "に", "romaji": "ni" },
+            { "surface": "しますか", "reading": "しますか", "romaji": "shimasu ka" },
+            { "surface": "。", "reading": "。", "romaji": "." }
+          ]
+        },
+        {
+          "index": 3,
+          "speaker": "Yui",
+          "tokens": [
+            { "surface": "アイス", "reading": "アイス", "romaji": "aisu" },
+            { "surface": "で", "reading": "で", "romaji": "de" },
+            { "surface": "お願いします", "reading": "おねがいします", "romaji": "onegai shimasu" },
+            { "surface": "。", "reading": "。", "romaji": "." }
+          ]
+        },
+        {
+          "index": 4,
+          "speaker": "店員",
+          "tokens": [
+            { "surface": "店内", "reading": "てんない", "romaji": "tennai" },
+            { "surface": "で", "reading": "で", "romaji": "de" },
+            { "surface": "お召し上がり", "reading": "おめしあがり", "romaji": "o-meshiagari" },
+            { "surface": "ですか", "reading": "ですか", "romaji": "desu ka" },
+            { "surface": "。", "reading": "。", "romaji": "." }
+          ]
+        },
+        {
+          "index": 5,
+          "speaker": "Yui",
+          "tokens": [
+            { "surface": "いいえ", "reading": "いいえ", "romaji": "iie" },
+            { "surface": "、", "reading": "、", "romaji": "," },
+            { "surface": "持ち帰り", "reading": "もちかえり", "romaji": "mochikaeri" },
+            { "surface": "で", "reading": "で", "romaji": "de" },
+            { "surface": "。", "reading": "。", "romaji": "." }
+          ]
+        },
+        {
+          "index": 6,
+          "speaker": "店員",
+          "tokens": [
+            { "surface": "かしこまりました", "reading": "かしこまりました", "romaji": "kashikomarimashita" },
+            { "surface": "。", "reading": "。", "romaji": "." },
+            { "surface": "三百円", "reading": "さんびゃくえん", "romaji": "sanbyaku en" },
+            { "surface": "です", "reading": "です", "romaji": "desu" },
+            { "surface": "。", "reading": "。", "romaji": "." }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sample-weekend-01",
+      "title": "Weekend Plans",
+      "level": "N5",
+      "kind": "dialogue",
+      "attribution": "ingrain sample",
+      "speakers": ["Sora", "Mika"],
+      "lines": [
+        {
+          "index": 0,
+          "speaker": "Sora",
+          "tokens": [
+            { "surface": "週末", "reading": "しゅうまつ", "romaji": "shuumatsu" },
+            { "surface": "は", "reading": "は", "romaji": "wa" },
+            { "surface": "何", "reading": "なに", "romaji": "nani" },
+            { "surface": "を", "reading": "を", "romaji": "o" },
+            { "surface": "しますか", "reading": "しますか", "romaji": "shimasu ka" },
+            { "surface": "。", "reading": "。", "romaji": "." }
+          ]
+        },
+        {
+          "index": 1,
+          "speaker": "Mika",
+          "tokens": [
+            { "surface": "土曜日", "reading": "どようび", "romaji": "doyoubi" },
+            { "surface": "に", "reading": "に", "romaji": "ni" },
+            { "surface": "映画", "reading": "えいが", "romaji": "eiga" },
+            { "surface": "を", "reading": "を", "romaji": "o" },
+            { "surface": "見ます", "reading": "みます", "romaji": "mimasu" },
+            { "surface": "。", "reading": "。", "romaji": "." }
+          ]
+        },
+        {
+          "index": 2,
+          "speaker": "Sora",
+          "tokens": [
+            { "surface": "いい", "reading": "いい", "romaji": "ii" },
+            { "surface": "です", "reading": "です", "romaji": "desu" },
+            { "surface": "ね", "reading": "ね", "romaji": "ne" },
+            { "surface": "。", "reading": "。", "romaji": "." },
+            { "surface": "どんな", "reading": "どんな", "romaji": "donna" },
+            { "surface": "映画", "reading": "えいが", "romaji": "eiga" },
+            { "surface": "ですか", "reading": "ですか", "romaji": "desu ka" },
+            { "surface": "。", "reading": "。", "romaji": "." }
+          ]
+        },
+        {
+          "index": 3,
+          "speaker": "Mika",
+          "tokens": [
+            { "surface": "アニメ", "reading": "アニメ", "romaji": "anime" },
+            { "surface": "の", "reading": "の", "romaji": "no" },
+            { "surface": "映画", "reading": "えいが", "romaji": "eiga" },
+            { "surface": "です", "reading": "です", "romaji": "desu" },
+            { "surface": "。", "reading": "。", "romaji": "." },
+            { "surface": "一緒に", "reading": "いっしょに", "romaji": "issho ni" },
+            { "surface": "行きませんか", "reading": "いきませんか", "romaji": "ikimasen ka" },
+            { "surface": "。", "reading": "。", "romaji": "." }
+          ]
+        },
+        {
+          "index": 4,
+          "speaker": "Sora",
+          "tokens": [
+            { "surface": "はい", "reading": "はい", "romaji": "hai" },
+            { "surface": "、", "reading": "、", "romaji": "," },
+            { "surface": "行きたい", "reading": "いきたい", "romaji": "ikitai" },
+            { "surface": "です", "reading": "です", "romaji": "desu" },
+            { "surface": "。", "reading": "。", "romaji": "." },
+            { "surface": "何時", "reading": "なんじ", "romaji": "nanji" },
+            { "surface": "に", "reading": "に", "romaji": "ni" },
+            { "surface": "会いましょうか", "reading": "あいましょうか", "romaji": "aimashou ka" },
+            { "surface": "。", "reading": "。", "romaji": "." }
+          ]
+        },
+        {
+          "index": 5,
+          "speaker": "Mika",
+          "tokens": [
+            { "surface": "二時", "reading": "にじ", "romaji": "niji" },
+            { "surface": "に", "reading": "に", "romaji": "ni" },
+            { "surface": "駅", "reading": "えき", "romaji": "eki" },
+            { "surface": "で", "reading": "で", "romaji": "de" },
+            { "surface": "会いましょう", "reading": "あいましょう", "romaji": "aimashou" },
+            { "surface": "。", "reading": "。", "romaji": "." }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sample-konbini-01",
+      "title": "At the Convenience Store",
+      "level": "N4",
+      "kind": "dialogue",
+      "attribution": "ingrain sample",
+      "speakers": ["店員", "Taro"],
+      "lines": [
+        {
+          "index": 0,
+          "speaker": "店員",
+          "tokens": [
+            { "surface": "お弁当", "reading": "おべんとう", "romaji": "o-bentou" },
+            { "surface": "は", "reading": "は", "romaji": "wa" },
+            { "surface": "温めますか", "reading": "あたためますか", "romaji": "atatamemasu ka" },
+            { "surface": "。", "reading": "。", "romaji": "." }
+          ]
+        },
+        {
+          "index": 1,
+          "speaker": "Taro",
+          "tokens": [
+            { "surface": "はい", "reading": "はい", "romaji": "hai" },
+            { "surface": "、", "reading": "、", "romaji": "," },
+            { "surface": "お願いします", "reading": "おねがいします", "romaji": "onegai shimasu" },
+            { "surface": "。", "reading": "。", "romaji": "." }
+          ]
+        },
+        {
+          "index": 2,
+          "speaker": "店員",
+          "tokens": [
+            { "surface": "袋", "reading": "ふくろ", "romaji": "fukuro" },
+            { "surface": "は", "reading": "は", "romaji": "wa" },
+            { "surface": "ご利用", "reading": "ごりよう", "romaji": "go-riyou" },
+            { "surface": "ですか", "reading": "ですか", "romaji": "desu ka" },
+            { "surface": "。", "reading": "。", "romaji": "." }
+          ]
+        },
+        {
+          "index": 3,
+          "speaker": "Taro",
+          "tokens": [
+            { "surface": "いいえ", "reading": "いいえ", "romaji": "iie" },
+            { "surface": "、", "reading": "、", "romaji": "," },
+            { "surface": "大丈夫です", "reading": "だいじょうぶです", "romaji": "daijoubu desu" },
+            { "surface": "。", "reading": "。", "romaji": "." },
+            { "surface": "カード", "reading": "カード", "romaji": "kaado" },
+            { "surface": "で", "reading": "で", "romaji": "de" },
+            { "surface": "払えますか", "reading": "はらえますか", "romaji": "haraemasu ka" },
+            { "surface": "。", "reading": "。", "romaji": "." }
+          ]
+        },
+        {
+          "index": 4,
+          "speaker": "店員",
+          "tokens": [
+            { "surface": "はい", "reading": "はい", "romaji": "hai" },
+            { "surface": "、", "reading": "、", "romaji": "," },
+            { "surface": "こちら", "reading": "こちら", "romaji": "kochira" },
+            { "surface": "に", "reading": "に", "romaji": "ni" },
+            { "surface": "タッチ", "reading": "タッチ", "romaji": "tatchi" },
+            { "surface": "して", "reading": "して", "romaji": "shite" },
+            { "surface": "ください", "reading": "ください", "romaji": "kudasai" },
+            { "surface": "。", "reading": "。", "romaji": "." }
+          ]
+        },
+        {
+          "index": 5,
+          "speaker": "Taro",
+          "tokens": [
+            { "surface": "ありがとうございます", "reading": "ありがとうございます", "romaji": "arigatou gozaimasu" },
+            { "surface": "。", "reading": "。", "romaji": "." }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sample-story-cat-01",
+      "title": "The Cat in the Garden",
+      "level": "N5",
+      "kind": "story",
+      "attribution": "ingrain sample",
+      "speakers": [],
+      "lines": [
+        {
+          "index": 0,
+          "tokens": [
+            { "surface": "私", "reading": "わたし", "romaji": "watashi" },
+            { "surface": "の", "reading": "の", "romaji": "no" },
+            { "surface": "家", "reading": "いえ", "romaji": "ie" },
+            { "surface": "に", "reading": "に", "romaji": "ni" },
+            { "surface": "は", "reading": "は", "romaji": "wa" },
+            { "surface": "小さい", "reading": "ちいさい", "romaji": "chiisai" },
+            { "surface": "庭", "reading": "にわ", "romaji": "niwa" },
+            { "surface": "が", "reading": "が", "romaji": "ga" },
+            { "surface": "あります", "reading": "あります", "romaji": "arimasu" },
+            { "surface": "。", "reading": "。", "romaji": "." }
+          ]
+        },
+        {
+          "index": 1,
+          "tokens": [
+            { "surface": "毎朝", "reading": "まいあさ", "romaji": "maiasa" },
+            { "surface": "、", "reading": "、", "romaji": "," },
+            { "surface": "白い", "reading": "しろい", "romaji": "shiroi" },
+            { "surface": "猫", "reading": "ねこ", "romaji": "neko" },
+            { "surface": "が", "reading": "が", "romaji": "ga" },
+            { "surface": "来ます", "reading": "きます", "romaji": "kimasu" },
+            { "surface": "。", "reading": "。", "romaji": "." }
+          ]
+        },
+        {
+          "index": 2,
+          "tokens": [
+            { "surface": "猫", "reading": "ねこ", "romaji": "neko" },
+            { "surface": "は", "reading": "は", "romaji": "wa" },
+            { "surface": "木", "reading": "き", "romaji": "ki" },
+            { "surface": "の", "reading": "の", "romaji": "no" },
+            { "surface": "下", "reading": "した", "romaji": "shita" },
+            { "surface": "で", "reading": "で", "romaji": "de" },
+            { "surface": "寝ます", "reading": "ねます", "romaji": "nemasu" },
+            { "surface": "。", "reading": "。", "romaji": "." }
+          ]
+        },
+        {
+          "index": 3,
+          "tokens": [
+            { "surface": "私", "reading": "わたし", "romaji": "watashi" },
+            { "surface": "は", "reading": "は", "romaji": "wa" },
+            { "surface": "窓", "reading": "まど", "romaji": "mado" },
+            { "surface": "から", "reading": "から", "romaji": "kara" },
+            { "surface": "猫", "reading": "ねこ", "romaji": "neko" },
+            { "surface": "を", "reading": "を", "romaji": "o" },
+            { "surface": "見ます", "reading": "みます", "romaji": "mimasu" },
+            { "surface": "。", "reading": "。", "romaji": "." }
+          ]
+        },
+        {
+          "index": 4,
+          "tokens": [
+            { "surface": "今日", "reading": "きょう", "romaji": "kyou" },
+            { "surface": "、", "reading": "、", "romaji": "," },
+            { "surface": "猫", "reading": "ねこ", "romaji": "neko" },
+            { "surface": "は", "reading": "は", "romaji": "wa" },
+            { "surface": "友達", "reading": "ともだち", "romaji": "tomodachi" },
+            { "surface": "と", "reading": "と", "romaji": "to" },
+            { "surface": "一緒に", "reading": "いっしょに", "romaji": "issho ni" },
+            { "surface": "来ました", "reading": "きました", "romaji": "kimashita" },
+            { "surface": "。", "reading": "。", "romaji": "." }
+          ]
+        }
+      ]
+    }
+  ]
+}

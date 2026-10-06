@@ -6,6 +6,7 @@ class ReviewCardDto {
   ReviewCardDto({
     required String id,
     required String uid,
+    String deckId = minedPhrasesDeckId,
     required CardType cardType,
     required String sourceItemId,
     required String promptText,
@@ -20,6 +21,7 @@ class ReviewCardDto {
   }) : map = {
          'id': id,
          'uid': uid,
+         'deckId': deckId,
          'cardType': cardType.name,
          'sourceItemId': sourceItemId,
          'promptText': promptText,
@@ -40,6 +42,8 @@ class ReviewCardDto {
     return ReviewCard(
       id: map['id'] as String,
       uid: map['uid'] as String,
+      // Cards from before decks existed have no deckId: they were all mined.
+      deckId: map['deckId'] as String? ?? minedPhrasesDeckId,
       cardType: CardType.values.firstWhere(
         (e) => e.name == map['cardType'],
         orElse: () => CardType.sentence,

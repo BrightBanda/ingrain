@@ -3,10 +3,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ingrain/features/content/data/youtube_transcript_fetcher.dart';
 import 'package:ingrain/features/content/data/youtube_url_parser.dart';
+import 'package:ingrain/features/content/presentation/view/add_content_type.dart';
 import 'package:ingrain/features/content/presentation/viewmodel/content_view_model.dart';
+import 'package:ingrain/features/dialogue/data/user_dialogue_repository.dart';
+import 'package:ingrain/features/dialogue/domain/dialogue_text_parser.dart';
+import 'package:ingrain/features/dialogue/presentation/viewmodel/dialogue_providers.dart';
+import 'package:ingrain/features/vocabulary/presentation/viewmodel/vocabulary_view_model.dart';
 
 class ContentAddView extends ConsumerStatefulWidget {
-  const ContentAddView({super.key});
+  final AddContentType initialType;
+
+  const ContentAddView({super.key, this.initialType = AddContentType.youtube});
 
   @override
   ConsumerState<ContentAddView> createState() => _ContentAddViewState();
@@ -16,6 +23,8 @@ class _ContentAddViewState extends ConsumerState<ContentAddView> {
   final _formKey = GlobalKey<FormState>();
   final _urlController = TextEditingController();
   final _titleController = TextEditingController();
+  final _dialogueController = TextEditingController();
+  late AddContentType _type = widget.initialType;
   bool _isFetching = false;
   String? _fetchError;
 
@@ -23,12 +32,47 @@ class _ContentAddViewState extends ConsumerState<ContentAddView> {
   void dispose() {
     _urlController.dispose();
     _titleController.dispose();
+    _dialogueController.dispose();
     super.dispose();
   }
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+    switch (_type) {
+      case AddContentType.youtube:
+        await _submitYoutube();
+      case AddContentType.dialogue:
+        await _submitDialogue();
+      case AddContentType.podcast:
+        return;
+    }
+  }
 
+  Future<void> _submitDialogue() async {
+    setState(() {
+      _isFetching = true;
+      _fetchError = null;
+    });
+    try {
+      final dictionary = await ref.read(dictionaryProvider.future);
+      final dialogue = const DialogueTextParser().parse(
+        id: UserDialogueRepository.newId(),
+        title: _titleController.text,
+        text: _dialogueController.text,
+        dictionary: dictionary,
+        now: DateTime.now(),
+      );
+      await ref.read(userDialogueRepositoryProvider).save(dialogue);
+      ref.invalidate(dialogueListViewModelProvider);
+      if (mounted) context.pushReplacement('/dialogues/${dialogue.id}');
+    } catch (e) {
+      if (mounted) setState(() => _fetchError = 'Could not save: $e');
+    } finally {
+      if (mounted) setState(() => _isFetching = false);
+    }
+  }
+
+  Future<void> _submitYoutube() async {
     final url = _urlController.text.trim();
     final title = _titleController.text.trim();
 
@@ -97,7 +141,8 @@ class _ContentAddViewState extends ConsumerState<ContentAddView> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final isDialogue = _type == AddContentType.dialogue;
+    final primary = Theme.of(context).colorScheme.primary;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Add Content')),
@@ -109,35 +154,54 @@ class _ContentAddViewState extends ConsumerState<ContentAddView> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Container(
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
                   width: 80,
                   height: 80,
                   decoration: BoxDecoration(
-                    color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                    color: primary.withValues(alpha: 0.16),
                     borderRadius: BorderRadius.circular(24),
                   ),
-                  child: Icon(
-                    Icons.video_library_outlined,
-                    size: 40,
-                    color: theme.colorScheme.primary,
-                  ),
+                  child: Icon(_type.icon, size: 40, color: primary),
                 ),
                 const SizedBox(height: 24),
-                TextFormField(
-                  controller: _urlController,
-                  decoration: const InputDecoration(
-                    labelText: 'YouTube URL or ID',
-                    hintText: 'https://youtu.be/dQw4w9WgXcQ',
-                    prefixIcon: Icon(Icons.link),
-                  ),
-                  validator: (v) {
-                    if (v == null || v.trim().isEmpty) {
-                      return 'Enter a YouTube URL or video ID';
-                    }
-                    return null;
-                  },
+                DropdownButtonFormField<AddContentType>(
+                  initialValue: _type,
+                  decoration: const InputDecoration(labelText: 'Content type'),
+                  borderRadius: BorderRadius.circular(16),
+                  items: [
+                    for (final type in AddContentType.values)
+                      DropdownMenuItem(
+                        value: type,
+                        enabled: type.isAvailable,
+                        child: _TypeLabel(type: type),
+                      ),
+                  ],
+                  onChanged: _isFetching
+                      ? null
+                      : (type) => setState(() {
+                          _type = type ?? _type;
+                          _fetchError = null;
+                        }),
                 ),
                 const SizedBox(height: 16),
+                if (!isDialogue) ...[
+                  TextFormField(
+                    controller: _urlController,
+                    decoration: const InputDecoration(
+                      labelText: 'YouTube URL or ID',
+                      hintText: 'https://youtu.be/dQw4w9WgXcQ',
+                      prefixIcon: Icon(Icons.link),
+                    ),
+                    validator: (v) {
+                      if (v == null || v.trim().isEmpty) {
+                        return 'Enter a YouTube URL or video ID';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                ],
                 TextFormField(
                   controller: _titleController,
                   decoration: const InputDecoration(
@@ -151,16 +215,36 @@ class _ContentAddViewState extends ConsumerState<ContentAddView> {
                     return null;
                   },
                 ),
+                if (isDialogue) ...[
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _dialogueController,
+                    minLines: 6,
+                    maxLines: 14,
+                    decoration: const InputDecoration(
+                      labelText: 'Japanese text',
+                      alignLabelWithHint: true,
+                      hintText: 'Aiko: おはようございます。\nKen: おはよう!',
+                      helperText:
+                          'One line each. Start a line with "Name:" to set '
+                          'the speaker.',
+                      helperMaxLines: 2,
+                    ),
+                    validator: (v) {
+                      if (v == null || v.trim().isEmpty) {
+                        return 'Paste or type the dialogue';
+                      }
+                      return null;
+                    },
+                  ),
+                ],
                 if (_fetchError != null) ...[
                   const SizedBox(height: 16),
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Colors.orange.shade700.withValues(alpha: 0.08),
+                      color: Colors.orange.shade700.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: Colors.orange.shade700.withValues(alpha: 0.3),
-                      ),
                     ),
                     child: Row(
                       children: [
@@ -189,10 +273,10 @@ class _ContentAddViewState extends ConsumerState<ContentAddView> {
                     minimumSize: const Size.fromHeight(48),
                   ),
                   child: _isFetching
-                      ? const Row(
+                      ? Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            SizedBox(
+                            const SizedBox(
                               width: 20,
                               height: 20,
                               child: CircularProgressIndicator(
@@ -202,17 +286,59 @@ class _ContentAddViewState extends ConsumerState<ContentAddView> {
                                 ),
                               ),
                             ),
-                            SizedBox(width: 12),
-                            Text('Fetching transcript...'),
+                            const SizedBox(width: 12),
+                            Text(
+                              isDialogue
+                                  ? 'Saving dialogue...'
+                                  : 'Fetching transcript...',
+                            ),
                           ],
                         )
-                      : const Text('Add Content'),
+                      : Text(isDialogue ? 'Save dialogue' : 'Add Content'),
                 ),
               ],
             ),
           ),
         ),
       ),
+    );
+  }
+}
+
+/// A dropdown row: coloured icon, name, and a "coming soon" tag when the type
+/// cannot be picked yet.
+class _TypeLabel extends StatelessWidget {
+  final AddContentType type;
+
+  const _TypeLabel({required this.type});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final primary = theme.colorScheme.primary;
+    final dim = !type.isAvailable;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(
+          type.icon,
+          size: 20,
+          color: dim ? primary.withValues(alpha: 0.45) : primary,
+        ),
+        const SizedBox(width: 10),
+        Text(
+          type.label,
+          style: dim
+              ? TextStyle(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.45),
+                )
+              : null,
+        ),
+        if (dim) ...[
+          const SizedBox(width: 8),
+          Text('Coming soon', style: theme.textTheme.labelSmall),
+        ],
+      ],
     );
   }
 }

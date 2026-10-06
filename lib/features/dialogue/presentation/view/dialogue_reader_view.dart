@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ingrain/app/theme/app_colors.dart';
 import 'package:ingrain/features/content/domain/content_item.dart';
 import 'package:ingrain/features/dialogue/domain/dialogue.dart';
 import 'package:ingrain/features/dialogue/presentation/viewmodel/dialogue_providers.dart';
@@ -12,6 +13,7 @@ import 'package:ingrain/features/vocabulary/presentation/view/vocabulary_lookup_
 import 'package:ingrain/features/vocabulary/presentation/view/vocabulary_save_sheet.dart';
 import 'package:ingrain/features/vocabulary/presentation/viewmodel/vocabulary_view_model.dart';
 import 'package:ingrain/features/settings/presentation/viewmodel/settings_view_model.dart';
+import 'package:ingrain/shared/widgets/colorful.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class DialogueReaderView extends ConsumerWidget {
@@ -74,10 +76,12 @@ class DialogueReaderView extends ConsumerWidget {
             Expanded(
               child: ListView.separated(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
-                itemCount: dialogue.lines.length,
-                separatorBuilder: (_, _) => const SizedBox(height: 18),
+                itemCount: dialogue.lines.length + 1,
+                separatorBuilder: (_, index) =>
+                    SizedBox(height: index == 0 ? 20 : 12),
                 itemBuilder: (context, index) {
-                  final line = dialogue.lines[index];
+                  if (index == 0) return _DialogueHeader(dialogue: dialogue);
+                  final line = dialogue.lines[index - 1];
                   return _DialogueLineCard(
                     dialogue: dialogue,
                     line: line,
@@ -222,6 +226,70 @@ class DialogueReaderView extends ConsumerWidget {
   }
 }
 
+/// Title, level and cast on the hero gradient.
+class _DialogueHeader extends StatelessWidget {
+  final Dialogue dialogue;
+
+  const _DialogueHeader({required this.dialogue});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isStory = dialogue.kind == DialogueKind.story;
+    return GradientPanel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                isStory ? Icons.menu_book : Icons.forum,
+                color: Colors.white,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  dialogue.title,
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              Pill(label: dialogue.level, color: Colors.white),
+              Pill(
+                label: '${dialogue.lines.length} lines',
+                color: Colors.white,
+              ),
+              for (final speaker in dialogue.speakers)
+                Pill(
+                  label: speaker,
+                  color: speakerColor(speaker, dialogue.speakers),
+                  solid: true,
+                ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            'Tap a word to look it up. Bookmark a line to review it later.',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: Colors.white.withValues(alpha: 0.9),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// One line as a chat bubble in its speaker's colour. Speakers alternate
+/// sides; a line with no speaker (a story) spans the full width.
 class _DialogueLineCard extends StatelessWidget {
   final Dialogue dialogue;
   final DialogueLine line;
@@ -239,35 +307,48 @@ class _DialogueLineCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (line.speaker != null) SpeakerLabel(speaker: line.speaker!),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: DialogueTokenRow(
-                    line: line,
-                    showRomaji: showRomaji,
-                    onTokenTap: onTokenTap,
-                  ),
+    final speaker = line.speaker;
+    final color = speaker == null
+        ? AppColors.primaryMain
+        : speakerColor(speaker, dialogue.speakers);
+    final onRight = speaker != null && dialogue.speakers.indexOf(speaker).isOdd;
+
+    final bubble = TintedSurface(
+      color: color,
+      alpha: 0.12,
+      radius: 18,
+      padding: const EdgeInsets.fromLTRB(14, 12, 4, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (speaker != null)
+            SpeakerLabel(speaker: speaker, speakers: dialogue.speakers),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: DialogueTokenRow(
+                  line: line,
+                  showRomaji: showRomaji,
+                  onTokenTap: onTokenTap,
                 ),
-                IconButton(
-                  tooltip: 'Mine sentence',
-                  icon: const Icon(Icons.bookmark_add_outlined),
-                  color: theme.colorScheme.primary,
-                  onPressed: onMine,
-                ),
-              ],
-            ),
-          ],
-        ),
+              ),
+              IconButton(
+                tooltip: 'Mine sentence',
+                icon: const Icon(Icons.bookmark_add_outlined),
+                color: color,
+                onPressed: onMine,
+              ),
+            ],
+          ),
+        ],
       ),
+    );
+
+    if (speaker == null) return bubble;
+    return Align(
+      alignment: onRight ? Alignment.centerRight : Alignment.centerLeft,
+      child: FractionallySizedBox(widthFactor: 0.88, child: bubble),
     );
   }
 }

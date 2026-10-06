@@ -8,12 +8,34 @@ import 'package:flutter/material.dart';
 /// brand color is wanted regardless of brightness.
 abstract final class AppColors {
   // Brand hues.
-  static const Color primaryDark = Color(0xFF12305E); // deep navy — headings, text on pale containers
-  static const Color primaryMain = Color(0xFF2F6FED); // vivid blue — primary interactive color
-  static const Color primaryLight = Color(0xFF9DB8F0); // softened blue — accents on dark surfaces
+  static const Color primaryDark = Color(
+    0xFF12305E,
+  ); // deep navy — headings, text on pale containers
+  static const Color primaryMain = Color(
+    0xFF2F6FED,
+  ); // vivid blue — primary interactive color
+  static const Color primaryLight = Color(
+    0xFF9DB8F0,
+  ); // softened blue — accents on dark surfaces
+
+  // Accents. Each kind of content and activity has its own hue so the app
+  // reads at a glance; use them for icons, tinted tiles and highlights.
+  static const Color video = Color(0xFFFF5A5F); // coral
+  static const Color podcast = Color(0xFF9B5DE5); // violet
+  static const Color dialogue = Color(0xFF00B894); // teal
+  static const Color review = Color(0xFFFFA62B); // amber
+  static const Color streak = Color(0xFFFF7A45); // orange
+  static const Color vocabulary = Color(0xFFF15BB5); // pink
+  static const Color sentences = Color(0xFF00A6ED); // sky
+
+  /// The home hero card, blue into violet.
+  static const List<Color> heroGradient = [
+    Color(0xFF2F6FED),
+    Color(0xFF7B5CFA),
+  ];
 
   // Backgrounds.
-  static const Color backgroundLight = Color(0xFFF6F8FC);
+  static const Color backgroundLight = Color(0xFFF1F6FE);
   static const Color backgroundDark = Color(0xFF0D1015);
   static const Color surface = Color(0xFFFFFFFF);
   static const Color surfaceDark = Color(0xFF161B24);

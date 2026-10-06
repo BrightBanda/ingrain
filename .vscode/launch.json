@@ -1,0 +1,18 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "ingrain (phone over USB + local API)",
+      "request": "launch",
+      "type": "dart",
+      "preLaunchTask": "adb reverse API port",
+      "args": ["--dart-define=API_BASE_URL=http://127.0.0.1:8000"]
+    },
+    {
+      "name": "ingrain (emulator + local API)",
+      "request": "launch",
+      "type": "dart",
+      "args": ["--dart-define=API_BASE_URL=http://10.0.2.2:8000"]
+    }
+  ]
+}
