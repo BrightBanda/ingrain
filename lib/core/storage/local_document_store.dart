@@ -1,14 +1,23 @@
 import 'dart:convert';
 
+import 'package:ingrain/core/storage/document_store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-class LocalDocumentStore {
+/// SharedPreferences-backed [DocumentStore], plus the dialogue cache's extras.
+///
+/// This is no longer the store behind user data — that is `FirestoreDocumentStore`.
+/// It remains the offline cache for the dialogue catalogue, which needs
+/// `registerCollection` and the nested `dialogues/<id>` key shape.
+class LocalDocumentStore implements DocumentStore {
   final SharedPreferences _prefs;
 
   LocalDocumentStore(this._prefs);
 
   static const _prefix = 'local_store_';
   static const _usersKey = '${_prefix}users';
+
+  /// Key prefix for the pre-Firebase local store, cleared on first launch.
+  static const legacyKeyPrefix = _prefix;
 
   String _collectionKey(String uid, String collection) =>
       '$_prefix$uid/$collection';
@@ -37,6 +46,7 @@ class LocalDocumentStore {
     await _prefs.setString(_collectionKey(uid, collection), raw);
   }
 
+  @override
   Future<Map<String, dynamic>> getDoc(
     String uid,
     String collection,
@@ -48,6 +58,7 @@ class LocalDocumentStore {
     );
   }
 
+  @override
   Future<void> setDoc(
     String uid,
     String collection,
@@ -68,12 +79,14 @@ class LocalDocumentStore {
     await _saveCollection(uid, collection, coll);
   }
 
+  @override
   Future<void> deleteDoc(String uid, String collection, String docId) async {
     final coll = await _loadCollection(uid, collection);
     coll.remove(docId);
     await _saveCollection(uid, collection, coll);
   }
 
+  @override
   Future<List<Map<String, dynamic>>> listDocs(
     String uid,
     String collection,
@@ -90,15 +103,6 @@ class LocalDocumentStore {
     await _prefs.remove(_collectionKey(uid, collection));
   }
 
-  Future<List<String>> listCollectionIds(String uid) async {
-    final userMap = await _loadUserMap();
-    final collections = userMap[uid];
-    if (collections is Map) {
-      return collections.keys.toList().cast<String>();
-    }
-    return [];
-  }
-
   Future<Map<String, dynamic>> _loadUserMap() async {
     final raw = _prefs.getString(_usersKey);
     if (raw == null) return {};
@@ -111,6 +115,9 @@ class LocalDocumentStore {
     }
   }
 
+  /// Only `LocalDialogueCache` needs this, and only because it writes under
+  /// `dialogues/<id>` — a shape Firestore cannot represent. The dialogue cache
+  /// stays on this store, so the method does too.
   Future<void> registerCollection(String uid, String collection) async {
     final userMap = await _loadUserMap();
     final existing = Map<String, dynamic>.from(
@@ -118,16 +125,6 @@ class LocalDocumentStore {
     );
     existing[collection] = true;
     userMap[uid] = existing;
-    await _prefs.setString(_usersKey, jsonEncode(userMap));
-  }
-
-  Future<void> clearAllForUid(String uid) async {
-    final collectionIds = await listCollectionIds(uid);
-    for (final coll in collectionIds) {
-      await _prefs.remove(_collectionKey(uid, coll));
-    }
-    final userMap = await _loadUserMap();
-    userMap.remove(uid);
     await _prefs.setString(_usersKey, jsonEncode(userMap));
   }
 }

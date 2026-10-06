@@ -1,6 +1,6 @@
 import 'dart:math';
 
-import 'package:ingrain/core/storage/local_document_store.dart';
+import 'package:ingrain/core/storage/document_store.dart';
 import 'package:ingrain/features/auth/domain/auth_repository.dart';
 import 'package:ingrain/features/content/domain/content_item.dart';
 import 'package:ingrain/features/sentence_mining/data/sentence_item_dto.dart';
@@ -8,7 +8,7 @@ import 'package:ingrain/features/sentence_mining/domain/sentence_item.dart';
 import 'package:ingrain/features/sentence_mining/domain/sentence_repository.dart';
 
 class LocalSentenceRepository implements SentenceRepository {
-  final LocalDocumentStore _store;
+  final DocumentStore _store;
   final AuthRepository _auth;
 
   LocalSentenceRepository(this._store, this._auth);

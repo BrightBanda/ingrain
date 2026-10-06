@@ -17,9 +17,6 @@ class _Auth implements AuthRepository {
 
   @override
   Future<void> setDisplayName(String name) async {}
-
-  @override
-  Future<void> clear() async {}
 }
 
 class _FakeClient extends http.BaseClient {

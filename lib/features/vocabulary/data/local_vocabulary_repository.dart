@@ -1,6 +1,6 @@
 import 'dart:math';
 
-import 'package:ingrain/core/storage/local_document_store.dart';
+import 'package:ingrain/core/storage/document_store.dart';
 import 'package:ingrain/features/auth/domain/auth_repository.dart';
 import 'package:ingrain/features/content/domain/content_item.dart';
 import 'package:ingrain/features/vocabulary/data/vocabulary_item_dto.dart';
@@ -8,7 +8,7 @@ import 'package:ingrain/features/vocabulary/domain/vocabulary_item.dart';
 import 'package:ingrain/features/vocabulary/domain/vocabulary_repository.dart';
 
 class LocalVocabularyRepository implements VocabularyRepository {
-  final LocalDocumentStore _store;
+  final DocumentStore _store;
   final AuthRepository _auth;
 
   LocalVocabularyRepository(this._store, this._auth);

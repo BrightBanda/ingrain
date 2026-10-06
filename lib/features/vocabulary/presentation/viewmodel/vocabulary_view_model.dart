@@ -19,7 +19,7 @@ import 'package:ingrain/features/vocabulary/domain/vocabulary_item.dart';
 import 'package:ingrain/features/vocabulary/domain/vocabulary_repository.dart';
 
 final vocabularyRepositoryProvider = Provider<VocabularyRepository>((ref) {
-  final store = ref.watch(localDocumentStoreProvider);
+  final store = ref.watch(documentStoreProvider);
   final authRepo = ref.watch(authRepositoryProvider);
   return LocalVocabularyRepository(store, authRepo);
 });

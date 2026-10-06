@@ -1,6 +1,6 @@
 import 'dart:math';
 
-import 'package:ingrain/core/storage/local_document_store.dart';
+import 'package:ingrain/core/storage/document_store.dart';
 import 'package:ingrain/features/auth/domain/auth_repository.dart';
 import 'package:ingrain/features/srs/data/review_card_dto.dart';
 import 'package:ingrain/features/srs/data/review_event_dto.dart';
@@ -9,7 +9,7 @@ import 'package:ingrain/features/srs/domain/review_event.dart';
 import 'package:ingrain/features/srs/domain/review_repository.dart';
 
 class LocalReviewRepository implements ReviewRepository {
-  final LocalDocumentStore _store;
+  final DocumentStore _store;
   final AuthRepository _auth;
 
   LocalReviewRepository(this._store, this._auth);

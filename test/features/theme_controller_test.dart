@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ingrain/app/theme/theme_controller.dart';
-import 'package:ingrain/core/providers.dart';
 import 'package:ingrain/features/settings/domain/app_settings.dart';
 import 'package:ingrain/features/settings/presentation/viewmodel/settings_view_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../support/test_overrides.dart';
 
 void main() {
   late ProviderContainer container;
@@ -13,10 +14,17 @@ void main() {
   Future<void> pump() async {
     SharedPreferences.setMockInitialValues({});
     final prefs = await SharedPreferences.getInstance();
+    final session = FakeAuthSession();
+    // The settings repository now lives behind Firestore, so point the document
+    // store and auth providers at in-memory stand-ins — a real session must never
+    // leak a broadcast stream that keeps the test binding alive.
     container = ProviderContainer(
-      overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+      overrides: [
+        ...appTestOverrides(prefs, session: session),
+      ],
     );
     addTearDown(container.dispose);
+    addTearDown(session.dispose);
     // Warm up both providers so the projected theme mode is resolved.
     container.read(settingsViewModelProvider);
     await Future<void>.delayed(Duration.zero);
@@ -24,13 +32,13 @@ void main() {
   }
 
   group('ThemeControllerNotifier', () {
-    testWidgets('defaults to system when no theme is persisted', (tester) async {
+    test('defaults to system when no theme is persisted', () async {
       await pump();
 
       expect(container.read(themeControllerProvider), ThemeMode.system);
     });
 
-    testWidgets('projects a persisted dark setting', (tester) async {
+    test('projects a persisted dark setting', () async {
       await pump();
 
       await container
@@ -41,7 +49,7 @@ void main() {
       expect(container.read(themeControllerProvider), ThemeMode.dark);
     });
 
-    testWidgets('projects a persisted light setting', (tester) async {
+    test('projects a persisted light setting', () async {
       await pump();
 
       await container
@@ -52,9 +60,7 @@ void main() {
       expect(container.read(themeControllerProvider), ThemeMode.light);
     });
 
-    testWidgets('setMode switches immediately and persists the choice', (
-      tester,
-    ) async {
+    test('setMode switches immediately and persists the choice', () async {
       await pump();
 
       await container
@@ -67,9 +73,7 @@ void main() {
       expect(settings.themeMode, ThemeSetting.dark);
     });
 
-    testWidgets('setMode back to system keeps following persisted state', (
-      tester,
-    ) async {
+    test('setMode back to system keeps following persisted state', () async {
       await pump();
 
       await container

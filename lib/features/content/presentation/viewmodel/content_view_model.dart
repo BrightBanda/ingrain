@@ -12,7 +12,7 @@ import 'package:ingrain/features/content/domain/transcript_sentence.dart';
 import 'package:ingrain/features/content/data/transcript_parser.dart';
 
 final contentRepositoryProvider = Provider<ContentRepository>((ref) {
-  final store = ref.watch(localDocumentStoreProvider);
+  final store = ref.watch(documentStoreProvider);
   final authRepo = ref.watch(authRepositoryProvider);
   return LocalContentRepository(store, authRepo);
 });

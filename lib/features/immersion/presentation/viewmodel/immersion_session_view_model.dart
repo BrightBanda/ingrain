@@ -14,7 +14,7 @@ import 'package:ingrain/features/immersion/domain/session_state.dart';
 final Clock _defaultClock = SystemClock();
 
 final immersionRepositoryProvider = Provider<ImmersionRepository>((ref) {
-  final store = ref.watch(localDocumentStoreProvider);
+  final store = ref.watch(documentStoreProvider);
   final authRepo = ref.watch(authRepositoryProvider);
   return LocalImmersionRepository(store, authRepo);
 });

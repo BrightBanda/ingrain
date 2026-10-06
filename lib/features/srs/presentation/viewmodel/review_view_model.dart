@@ -11,7 +11,7 @@ import 'package:ingrain/features/srs/domain/review_repository.dart';
 import 'package:ingrain/features/srs/domain/srs_scheduler.dart';
 
 final reviewRepositoryProvider = Provider<ReviewRepository>((ref) {
-  final store = ref.watch(localDocumentStoreProvider);
+  final store = ref.watch(documentStoreProvider);
   final authRepo = ref.watch(authRepositoryProvider);
   return LocalReviewRepository(store, authRepo);
 });

@@ -1,10 +1,10 @@
-import 'package:ingrain/core/storage/local_document_store.dart';
+import 'package:ingrain/core/storage/document_store.dart';
 import 'package:ingrain/features/auth/domain/auth_repository.dart';
 import 'package:ingrain/features/settings/domain/app_settings.dart';
 import 'package:ingrain/features/settings/domain/settings_repository.dart';
 
 class LocalSettingsRepository implements SettingsRepository {
-  final LocalDocumentStore _store;
+  final DocumentStore _store;
   final AuthRepository _auth;
 
   LocalSettingsRepository(this._store, this._auth);

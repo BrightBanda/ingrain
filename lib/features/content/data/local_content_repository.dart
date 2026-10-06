@@ -1,4 +1,5 @@
-import 'package:ingrain/core/storage/local_document_store.dart';
+import 'package:flutter/foundation.dart';
+import 'package:ingrain/core/storage/document_store.dart';
 import 'package:ingrain/features/auth/domain/auth_repository.dart';
 import 'package:ingrain/features/content/data/content_item_dto.dart';
 import 'package:ingrain/features/content/domain/content_item.dart';
@@ -7,7 +8,7 @@ import 'package:ingrain/features/content/domain/transcript_sentence.dart';
 import 'package:ingrain/features/content/data/youtube_url_parser.dart';
 
 class LocalContentRepository implements ContentRepository {
-  final LocalDocumentStore _store;
+  final DocumentStore _store;
   final AuthRepository _auth;
 
   LocalContentRepository(this._store, this._auth);
@@ -94,11 +95,7 @@ class LocalContentRepository implements ContentRepository {
   @override
   Future<List<TranscriptSentence>> getTranscript(String contentId) async {
     final uid = await _auth.ensureUid();
-    final doc = await _store.getDoc(
-      uid,
-      '$collection/$contentId',
-      'transcript',
-    );
+    final doc = await _store.getDoc(uid, collection, transcriptDocId(contentId));
     final data = doc['sentences'];
     if (data == null || data is! List) return [];
     return data.asMap().entries.map((entry) {
@@ -128,10 +125,16 @@ class LocalContentRepository implements ContentRepository {
           },
         )
         .toList();
-    await _store.setDoc(uid, '$collection/$contentId', 'transcript', {
+    await _store.setDoc(uid, collection, transcriptDocId(contentId), {
       'sentences': data,
     });
   }
+
+  /// Firestore cannot address a subcollection by embedding a `/` in a collection
+  /// name, so a content item's transcript is a sibling document in `contentHistory`
+  /// keyed by a composite id. Keeps `contentHistory` one flat, listable collection.
+  @visibleForTesting
+  static String transcriptDocId(String contentId) => '${contentId}__transcript';
 
   static String _extractVideoId(String url) {
     final parsed = YoutubeUrlParser.tryParse(url);

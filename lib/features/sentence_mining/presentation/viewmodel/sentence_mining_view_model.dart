@@ -16,7 +16,7 @@ import 'package:ingrain/features/srs/domain/review_repository.dart';
 import 'package:ingrain/features/srs/presentation/viewmodel/review_view_model.dart';
 
 final sentenceRepositoryProvider = Provider<SentenceRepository>((ref) {
-  final store = ref.watch(localDocumentStoreProvider);
+  final store = ref.watch(documentStoreProvider);
   final authRepo = ref.watch(authRepositoryProvider);
   return LocalSentenceRepository(store, authRepo);
 });

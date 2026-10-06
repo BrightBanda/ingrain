@@ -14,9 +14,6 @@ class _Auth implements AuthRepository {
 
   @override
   Future<void> setDisplayName(String name) async {}
-
-  @override
-  Future<void> clear() async {}
 }
 
 void main() {

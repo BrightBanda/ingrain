@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: ingrain-api
+    runtime: python
+    rootDir: Ingrained_backend
+    plan: free
+    buildCommand: uv sync --frozen --no-dev
+    startCommand: uv run uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      # Matches the interpreter uv.lock was resolved against. `uv sync --frozen`
+      # provisions this exact version, so keep the two in step.
+      - key: PYTHON_VERSION
+        value: "3.12.14"
+      - key: FIREBASE_PROJECT_ID
+        sync: false

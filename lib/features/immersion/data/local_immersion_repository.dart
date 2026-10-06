@@ -1,12 +1,12 @@
 import 'dart:math';
 
-import 'package:ingrain/core/storage/local_document_store.dart';
+import 'package:ingrain/core/storage/document_store.dart';
 import 'package:ingrain/features/auth/domain/auth_repository.dart';
 import 'package:ingrain/features/immersion/domain/immersion_repository.dart';
 import 'package:ingrain/features/immersion/domain/immersion_session.dart';
 
 class LocalImmersionRepository implements ImmersionRepository {
-  final LocalDocumentStore _store;
+  final DocumentStore _store;
   final AuthRepository _auth;
 
   LocalImmersionRepository(this._store, this._auth);

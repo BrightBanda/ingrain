@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ingrain/core/storage/local_document_store.dart';
-import 'package:ingrain/features/auth/data/local_auth_repository.dart';
+import '../../support/fake_auth_repository.dart';
 import 'package:ingrain/features/content/data/local_content_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -12,7 +12,7 @@ void main() {
     SharedPreferences.setMockInitialValues({});
     final prefs = await SharedPreferences.getInstance();
     store = LocalDocumentStore(prefs);
-    final auth = LocalAuthRepository(store);
+    final auth = FakeAuthRepository();
     repository = LocalContentRepository(store, auth);
   });
 

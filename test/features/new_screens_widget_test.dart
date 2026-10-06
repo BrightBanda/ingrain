@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ingrain/core/providers.dart';
 import 'package:ingrain/core/utils/clock.dart';
 import 'package:ingrain/features/content/domain/content_item.dart';
 import 'package:ingrain/features/content/domain/transcript_sentence.dart';
@@ -31,6 +30,8 @@ import 'package:ingrain/features/vocabulary/presentation/view/vocabulary_view.da
 import 'package:ingrain/features/vocabulary/presentation/widgets/tappable_transcript_text.dart';
 import 'package:ingrain/features/vocabulary/presentation/viewmodel/vocabulary_view_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../support/test_overrides.dart';
 
 class FixedTestClock extends Clock {
   @override
@@ -465,7 +466,7 @@ void main() {
     final container = ProviderContainer(
       overrides: [
         // The progress dashboard reads the daily goal through settings.
-        sharedPreferencesProvider.overrideWithValue(prefs),
+        ...appTestOverrides(prefs),
         clockProvider.overrideWithValue(FixedTestClock()),
         sentenceRepositoryProvider.overrideWithValue(
           InMemorySentenceRepository([...sentences]),
@@ -574,7 +575,7 @@ void main() {
 
       final container = ProviderContainer(
         overrides: [
-          sharedPreferencesProvider.overrideWithValue(prefs),
+          ...appTestOverrides(prefs),
           clockProvider.overrideWithValue(FixedTestClock()),
           sentenceRepositoryProvider.overrideWithValue(sentenceRepository),
           reviewRepositoryProvider.overrideWithValue(reviewRepository),
@@ -642,7 +643,7 @@ void main() {
 
       final container = ProviderContainer(
         overrides: [
-          sharedPreferencesProvider.overrideWithValue(prefs),
+          ...appTestOverrides(prefs),
           clockProvider.overrideWithValue(FixedTestClock()),
           transcriptProvider('content-1')
               .overrideWith((ref) async => const <TranscriptSentence>[]),
@@ -780,7 +781,7 @@ void main() {
       final prefs = await SharedPreferences.getInstance();
       final container = ProviderContainer(
         overrides: [
-          sharedPreferencesProvider.overrideWithValue(prefs),
+          ...appTestOverrides(prefs),
           clockProvider.overrideWithValue(FixedTestClock()),
           vocabularyRepositoryProvider.overrideWithValue(
             InMemoryVocabularyRepository(),

@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ingrain/core/storage/local_document_store.dart';
-import 'package:ingrain/features/auth/data/local_auth_repository.dart';
+import '../support/fake_auth_repository.dart';
 import 'package:ingrain/features/content/domain/content_item.dart';
 import 'package:ingrain/features/sentence_mining/data/local_sentence_repository.dart';
 import 'package:ingrain/features/srs/data/local_review_repository.dart';
@@ -22,7 +22,7 @@ void main() {
     SharedPreferences.setMockInitialValues({});
     final prefs = await SharedPreferences.getInstance();
     store = LocalDocumentStore(prefs);
-    final auth = LocalAuthRepository(store);
+    final auth = FakeAuthRepository();
     sentences = LocalSentenceRepository(store, auth);
     reviews = LocalReviewRepository(store, auth);
     vocabulary = LocalVocabularyRepository(store, auth);
@@ -183,7 +183,7 @@ void main() {
     test(
       'documents land in the sentences collection under the user id',
       () async {
-        final uid = await LocalAuthRepository(store).ensureUid();
+        final uid = await FakeAuthRepository(uid: 'test-uid').ensureUid();
         final saved = await sentences.save(
           japanese: '文',
           sourceType: SourceType.manual,
@@ -200,7 +200,7 @@ void main() {
     );
 
     test('review cards and history use separate collections', () async {
-      final uid = await LocalAuthRepository(store).ensureUid();
+      final uid = await FakeAuthRepository(uid: 'test-uid').ensureUid();
       final card = await reviews.createCard(
         cardType: CardType.sentence,
         sourceItemId: 'sentence-1',
@@ -672,7 +672,7 @@ void main() {
           createdAt: now,
         );
 
-        final auth = LocalAuthRepository(store);
+        final auth = FakeAuthRepository();
         final uid = await auth.ensureUid();
         final docs = await store.listDocs(
           uid,

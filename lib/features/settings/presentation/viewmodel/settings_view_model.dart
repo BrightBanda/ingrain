@@ -7,7 +7,7 @@ import 'package:ingrain/features/settings/domain/app_settings.dart';
 import 'package:ingrain/features/settings/domain/settings_repository.dart';
 
 final settingsRepositoryProvider = Provider<SettingsRepository>((ref) {
-  final store = ref.watch(localDocumentStoreProvider);
+  final store = ref.watch(documentStoreProvider);
   final auth = ref.watch(authRepositoryProvider);
   return LocalSettingsRepository(store, auth);
 });

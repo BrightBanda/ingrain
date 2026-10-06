@@ -3,13 +3,13 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ingrain/app/router.dart';
-import 'package:ingrain/core/providers.dart';
 import 'package:ingrain/features/auth/domain/auth_state.dart';
 import 'package:ingrain/features/auth/presentation/viewmodel/auth_view_model.dart';
 import 'package:ingrain/features/dialogue/domain/dialogue.dart';
 import 'package:ingrain/features/dialogue/domain/dialogue_repository.dart';
 import 'package:ingrain/features/dialogue/presentation/viewmodel/dialogue_providers.dart';
 import 'package:ingrain/shared/widgets/double_back_to_exit.dart';
+import '../support/test_overrides.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Skips the onboarding bootstrap so the router settles straight on the shell.
@@ -87,7 +87,7 @@ void main() {
 
     final container = ProviderContainer(
       overrides: [
-        sharedPreferencesProvider.overrideWithValue(prefs),
+        ...appTestOverrides(prefs),
         authViewModelProvider.overrideWith(OnboardedAuthViewModel.new),
         dialogueRepositoryProvider.overrideWithValue(
           NavigationDialogueRepository(),
