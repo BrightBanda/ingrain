@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ingrain/app/theme/app_colors.dart';
+import 'package:ingrain/features/ai/domain/ai_explanation.dart';
+import 'package:ingrain/features/ai/presentation/ai_explanation_providers.dart';
 import 'package:ingrain/shared/widgets/colorful.dart';
 
 class SentenceSaveRequest {
@@ -16,7 +19,7 @@ class SentenceSaveRequest {
 
 /// Shared save form used both when mining a transcript line and when adding a
 /// sentence by hand. Pops a [SentenceSaveRequest] on confirm.
-class SentenceSaveSheet extends StatefulWidget {
+class SentenceSaveSheet extends ConsumerStatefulWidget {
   final String title;
   final String japanese;
   final String? translation;
@@ -35,14 +38,15 @@ class SentenceSaveSheet extends StatefulWidget {
   });
 
   @override
-  State<SentenceSaveSheet> createState() => _SentenceSaveSheetState();
+  ConsumerState<SentenceSaveSheet> createState() => _SentenceSaveSheetState();
 }
 
-class _SentenceSaveSheetState extends State<SentenceSaveSheet> {
+class _SentenceSaveSheetState extends ConsumerState<SentenceSaveSheet> {
   late final TextEditingController _japaneseController;
   late final TextEditingController _translationController;
   late final TextEditingController _explanationController;
   String? _errorText;
+  bool _asking = false;
 
   @override
   void initState() {
@@ -73,6 +77,45 @@ class _SentenceSaveSheetState extends State<SentenceSaveSheet> {
         explanation: _nullable(_explanationController.text),
       ),
     );
+  }
+
+  /// Fills the translation and notes from the AI. Kept alive with a manual
+  /// listener so the auto-disposing provider survives until it answers.
+  Future<void> _askAi() async {
+    final japanese = _japaneseController.text.trim();
+    if (japanese.isEmpty) {
+      setState(() => _errorText = 'Type the Japanese first');
+      return;
+    }
+    final ExplainRequest request = (
+      text: japanese,
+      kind: ExplainKind.sentence,
+      context: widget.contextLabel,
+    );
+    setState(() {
+      _asking = true;
+      _errorText = null;
+    });
+    final subscription = ref.listenManual(
+      aiExplanationProvider(request),
+      (_, _) {},
+    );
+    try {
+      final explanation = await ref.read(aiExplanationProvider(request).future);
+      if (!mounted) return;
+      _translationController.text = explanation.translation;
+      _explanationController.text = explanation.toNotes();
+    } catch (error) {
+      if (!mounted) return;
+      setState(
+        () => _errorText = error is AiExplanationException
+            ? error.message
+            : 'The AI could not answer. Try again.',
+      );
+    } finally {
+      subscription.close();
+      if (mounted) setState(() => _asking = false);
+    }
   }
 
   static String? _nullable(String value) {
@@ -126,6 +169,19 @@ class _SentenceSaveSheetState extends State<SentenceSaveSheet> {
                 ),
               ),
               const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: _asking ? null : _askAi,
+                icon: _asking
+                    ? const SizedBox.square(
+                        dimension: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.auto_awesome),
+                label: Text(
+                  _asking ? 'Asking the AI…' : 'Translate & explain with AI',
+                ),
+              ),
+              const SizedBox(height: 12),
               TextField(
                 controller: _translationController,
                 minLines: 1,
@@ -138,7 +194,7 @@ class _SentenceSaveSheetState extends State<SentenceSaveSheet> {
               TextField(
                 controller: _explanationController,
                 minLines: 1,
-                maxLines: 4,
+                maxLines: 8,
                 decoration: const InputDecoration(
                   labelText: 'Explanation / notes (optional)',
                 ),

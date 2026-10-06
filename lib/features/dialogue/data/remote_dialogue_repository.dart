@@ -1,16 +1,12 @@
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
+import 'package:ingrain/core/config/api_config.dart';
 import 'package:ingrain/features/dialogue/data/dialogue_dto.dart';
 import 'package:ingrain/features/dialogue/data/local_dialogue_cache.dart';
 import 'package:ingrain/features/dialogue/data/sample_dialogue_loader.dart';
 import 'package:ingrain/features/dialogue/domain/dialogue.dart';
 import 'package:ingrain/features/dialogue/domain/dialogue_repository.dart';
-
-const dialogueApiBaseUrl = String.fromEnvironment(
-  'API_BASE_URL',
-  defaultValue: 'http://10.0.2.2:8000',
-);
 
 /// The dialogue catalogue: the API's dialogues plus the samples bundled with
 /// the app, with an offline cache for the API's.
@@ -31,7 +27,7 @@ class RemoteDialogueRepository implements DialogueRepository {
     required this._client,
     required this._cache,
     this._samples,
-    String baseUrl = dialogueApiBaseUrl,
+    String baseUrl = apiBaseUrl,
     this._timeout = const Duration(seconds: 6),
   }) : _baseUri = Uri.parse(baseUrl);
 

@@ -20,6 +20,11 @@ class FlashcardsView extends ConsumerWidget {
         title: const Text('Flashcards'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.search),
+            tooltip: 'Search',
+            onPressed: () => context.push('/search'),
+          ),
+          IconButton(
             icon: const Icon(Icons.file_upload_outlined),
             tooltip: 'Import deck',
             onPressed: () => showImportComingSoon(context),

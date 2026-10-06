@@ -105,6 +105,16 @@ class _ContentAddViewState extends ConsumerState<ContentAddView> {
           );
 
       if (contentItem != null && mounted) {
+        if (result.transcriptText == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'This video has no Japanese subtitles. Paste a transcript '
+                'to read along.',
+              ),
+            ),
+          );
+        }
         context.push(
           '/content/${contentItem.id}/transcript',
           extra: {

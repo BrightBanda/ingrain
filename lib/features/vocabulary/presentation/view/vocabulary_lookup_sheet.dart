@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:ingrain/app/theme/app_colors.dart';
+import 'package:ingrain/features/ai/domain/ai_explanation.dart';
+import 'package:ingrain/features/ai/presentation/ai_explanation_panel.dart';
 import 'package:ingrain/shared/widgets/colorful.dart';
 import 'package:ingrain/features/vocabulary/domain/dictionary_index.dart';
 
@@ -113,7 +115,15 @@ class VocabularyLookupSheet extends StatelessWidget {
                   ),
                 ),
               ],
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
+              AiExplanationPanel(
+                request: (
+                  text: word,
+                  kind: ExplainKind.word,
+                  context: contextLabel,
+                ),
+              ),
+              const SizedBox(height: 12),
               FilledButton.icon(
                 style: accentButtonStyle(AppColors.primaryMain),
                 onPressed: alreadySaved ? null : onSave,

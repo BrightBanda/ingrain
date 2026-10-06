@@ -12,6 +12,7 @@ import 'package:ingrain/features/dialogue/presentation/view/dialogue_reader_view
 import 'package:ingrain/features/immersion/presentation/view/immersion_home_view.dart';
 import 'package:ingrain/features/kana/presentation/kana_view.dart';
 import 'package:ingrain/features/profile/presentation/profile_view.dart';
+import 'package:ingrain/features/search/presentation/view/search_view.dart';
 import 'package:ingrain/features/sentence_mining/presentation/view/sentence_mining_view.dart';
 import 'package:ingrain/features/srs/presentation/view/deck_detail_view.dart';
 import 'package:ingrain/features/srs/presentation/view/flashcard_study_view.dart';
@@ -96,6 +97,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
         ),
       ),
+      GoRoute(path: '/search', builder: (context, state) => const SearchView()),
       GoRoute(
         path: '/sentences',
         builder: (context, state) => const SentenceMiningView(),

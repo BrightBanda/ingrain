@@ -29,6 +29,11 @@ class _ContentHistoryViewState extends ConsumerState<ContentHistoryView> {
         automaticallyImplyLeading: false,
         title: const Text('Library'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.search),
+            tooltip: 'Search',
+            onPressed: () => context.push('/search'),
+          ),
           if (_filter == LibraryContentFilter.videos) ...[
             IconButton(
               icon: const Icon(Icons.translate),

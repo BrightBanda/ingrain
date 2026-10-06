@@ -14,6 +14,7 @@ import 'package:ingrain/features/immersion/domain/immersion_repository.dart';
 import 'package:ingrain/features/immersion/domain/immersion_session.dart';
 import 'package:ingrain/features/immersion/presentation/viewmodel/immersion_session_view_model.dart';
 import 'package:ingrain/features/progress/presentation/view/progress_dashboard.dart';
+import 'package:ingrain/features/search/presentation/view/search_view.dart';
 import 'package:ingrain/features/sentence_mining/domain/sentence_item.dart';
 import 'package:ingrain/features/sentence_mining/domain/sentence_repository.dart';
 import 'package:ingrain/features/sentence_mining/presentation/view/sentence_mining_view.dart';
@@ -724,6 +725,32 @@ void main() {
 
       await scrollDashboardDown(tester);
       expect(find.text('Browse saved vocabulary'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+  });
+
+  group('SearchView', () {
+    testWidgets('finds a mined sentence by its translation', (tester) async {
+      await pumpScreen(
+        tester,
+        const SearchView(),
+        sentences: [sampleSentence()],
+        cards: [sampleCard()],
+      );
+
+      expect(find.text('Search your learning history'), findsOneWidget);
+
+      await tester.enterText(find.byType(TextField), 'a test');
+      await tester.pumpAndSettle();
+
+      expect(find.text('これはテストです。'), findsOneWidget);
+      expect(find.text('My Video · 0:42'), findsOneWidget);
+      expect(find.text('Reviewed 0×'), findsNothing);
+      expect(find.text('Not reviewed yet'), findsOneWidget);
+
+      await tester.enterText(find.byType(TextField), 'zzz');
+      await tester.pumpAndSettle();
+      expect(find.text('Nothing found'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
   });

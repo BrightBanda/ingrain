@@ -26,7 +26,15 @@ class ImmersionHomeView extends ConsumerWidget {
       appBar: AppBar(
         automaticallyImplyLeading: false,
         title: const Text('ingrain'),
-        actions: const [_AddContentMenu(), SizedBox(width: 12)],
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.search),
+            tooltip: 'Search',
+            onPressed: () => context.push('/search'),
+          ),
+          const _AddContentMenu(),
+          const SizedBox(width: 12),
+        ],
       ),
       body: RefreshIndicator(
         onRefresh: () async {
