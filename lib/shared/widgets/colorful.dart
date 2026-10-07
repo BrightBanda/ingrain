@@ -5,11 +5,12 @@ import 'package:ingrain/app/theme/app_colors.dart';
 // one accent hue per kind of thing (see `AppColors`), and gradient heroes.
 
 /// A rounded, borderless surface tinted with [color]. Tappable when [onTap]
-/// is set.
+/// or [onLongPress] is set.
 class TintedSurface extends StatelessWidget {
   final Color color;
   final Widget child;
   final VoidCallback? onTap;
+  final VoidCallback? onLongPress;
   final EdgeInsetsGeometry padding;
   final double radius;
   final double alpha;
@@ -19,6 +20,7 @@ class TintedSurface extends StatelessWidget {
     required this.color,
     required this.child,
     this.onTap,
+    this.onLongPress,
     this.padding = const EdgeInsets.all(16),
     this.radius = 20,
     this.alpha = 0.12,
@@ -31,7 +33,9 @@ class TintedSurface extends StatelessWidget {
       color: color.withValues(alpha: alpha),
       borderRadius: BorderRadius.circular(radius),
       clipBehavior: Clip.antiAlias,
-      child: onTap == null ? content : InkWell(onTap: onTap, child: content),
+      child: onTap == null && onLongPress == null
+          ? content
+          : InkWell(onTap: onTap, onLongPress: onLongPress, child: content),
     );
   }
 }
@@ -133,10 +137,14 @@ class Pill extends StatelessWidget {
             Icon(icon, size: 13, color: foreground),
             const SizedBox(width: 4),
           ],
-          Text(
-            label,
-            style: Theme.of(context).textTheme.labelSmall
-                ?.copyWith(color: foreground, fontWeight: FontWeight.w600),
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.labelSmall
+                  ?.copyWith(color: foreground, fontWeight: FontWeight.w600),
+            ),
           ),
         ],
       ),

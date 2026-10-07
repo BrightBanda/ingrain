@@ -43,6 +43,9 @@ abstract interface class AuthSession implements AuthRepository {
   /// Seeds the profile document on first sign-in. Idempotent.
   Future<void> ensureProfile();
 
+  /// Merges [fields] into the profile document, leaving every other field as is.
+  Future<void> updateProfile(Map<String, dynamic> fields);
+
   /// Returns false when the user dismissed the picker, which is not an error.
   Future<bool> signInWithGoogle();
 

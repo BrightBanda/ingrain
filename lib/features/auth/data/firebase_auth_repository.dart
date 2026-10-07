@@ -95,10 +95,8 @@ class FirebaseAuthRepository implements AuthSession {
       throw StateError('Cannot set a display name while signed out.');
     }
     final trimmed = name.trim();
-    await _profileRef(user.uid).set(
-      {'displayName': trimmed},
-      SetOptions(merge: true),
-    );
+    await _profileRef(user.uid)
+        .set({'displayName': trimmed}, SetOptions(merge: true));
     await user.updateDisplayName(trimmed);
   }
 
@@ -124,6 +122,17 @@ class FirebaseAuthRepository implements AuthSession {
       if (user.displayName != null) 'displayName': user.displayName,
       'createdAt': DateTime.now().toUtc().toIso8601String(),
     });
+  }
+
+  @override
+  Future<void> updateProfile(Map<String, dynamic> fields) async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      throw StateError('Cannot update the profile while signed out.');
+    }
+    final path = documentPath(user.uid, profileCollection, profileDocId);
+    assertFirestoreSafe(fields, path: path);
+    await _firestore.doc(path).set(fields, SetOptions(merge: true));
   }
 
   /// Returns false when the user dismissed the account chooser, which is not an

@@ -129,13 +129,14 @@ void main() {
   Future<ProviderContainer> pumpApp(
     WidgetTester tester, {
     List extraOverrides = const [],
+    FakeCatalogRepository? catalog,
   }) async {
     SharedPreferences.setMockInitialValues({});
     final prefs = await SharedPreferences.getInstance();
 
     final container = ProviderContainer(
       overrides: [
-        ...appTestOverrides(prefs),
+        ...appTestOverrides(prefs, catalog: catalog),
         authViewModelProvider.overrideWith(OnboardedAuthViewModel.new),
         dialogueRepositoryProvider.overrideWithValue(
           NavigationDialogueRepository(),
@@ -205,10 +206,25 @@ void main() {
       expect(find.text('YouTube video'), findsNothing);
       expect(find.byType(BackButton), findsNothing);
 
+      // Today's picks come from the (fake) catalogue, not the user's library.
+      expect(find.text("Today's picks"), findsOneWidget);
+      expect(find.text('Nihongo con Teppei #1'), findsOneWidget);
+      expect(find.text('For your interests'), findsOneWidget);
       await tester.scrollUntilVisible(find.text('At the station'), 200);
-      expect(find.text('Recommended video'), findsOneWidget);
-      expect(find.text('Add your first YouTube video'), findsOneWidget);
+      expect(find.text('Japanese in the park'), findsOneWidget);
+      expect(find.text('Curry, in easy Japanese'), findsOneWidget);
+      expect(find.text('Add your first YouTube video'), findsNothing);
       expect(find.text('Dialogue of the day'), findsOneWidget);
+    });
+
+    testWidgets('falls back to the library prompt when picks cannot load', (
+      tester,
+    ) async {
+      final offline = FakeCatalogRepository()..error = StateError('offline');
+      await pumpApp(tester, catalog: offline);
+
+      expect(find.text("Today's picks"), findsOneWidget);
+      expect(find.text('Add your first YouTube video'), findsOneWidget);
     });
 
     testWidgets('does not overflow on a phone viewport', (tester) async {
@@ -270,6 +286,12 @@ void main() {
 
       await tapTab(tester, 'Profile');
       expect(find.text('Tester'), findsOneWidget);
+      // The character hero sits above the tabs; the dashboard is below it.
+      await tester.scrollUntilVisible(
+        find.text('Today'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
       expect(find.text('Today'), findsOneWidget);
 
       await tester.tap(find.widgetWithText(Tab, 'Settings'));

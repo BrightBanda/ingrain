@@ -1,7 +1,13 @@
+import 'package:ingrain/features/auth/domain/user_profile.dart';
+
 class AuthState {
   final bool isLoading;
   final String uid;
   final String? displayName;
+
+  /// The stored profile, once loaded. Null while signed out, or when a test
+  /// builds the state from a name alone.
+  final UserProfile? profile;
 
   /// Set when the last sign-in attempt failed; cleared on the next attempt.
   final String? error;
@@ -10,6 +16,7 @@ class AuthState {
     required this.isLoading,
     required this.uid,
     this.displayName,
+    this.profile,
     this.error,
   });
 
@@ -21,19 +28,25 @@ class AuthState {
   const AuthState.ready({
     required String uid,
     String? displayName,
+    UserProfile? profile,
     String? error,
   }) : this._(
          isLoading: false,
          uid: uid,
          displayName: displayName,
+         profile: profile,
          error: error,
        );
 
   bool get isSignedIn => !isLoading && uid.isNotEmpty;
 
-  /// Both halves are required: signed in *and* has chosen a name. A Firebase user
-  /// who has authenticated but not completed onboarding is neither. The trim guards
-  /// against a name that is only whitespace, which would otherwise sail through.
-  bool get isOnboarded =>
-      isSignedIn && (displayName?.trim().isNotEmpty ?? false);
+  /// Signed in *and* through onboarding. With a loaded profile that means the
+  /// full flow (see [UserProfile.isOnboarded]); without one, having chosen a name.
+  /// The trim guards against a name that is only whitespace.
+  bool get isOnboarded {
+    if (!isSignedIn) return false;
+    final profile = this.profile;
+    if (profile != null) return profile.isOnboarded;
+    return displayName?.trim().isNotEmpty ?? false;
+  }
 }

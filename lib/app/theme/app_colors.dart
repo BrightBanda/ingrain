@@ -45,6 +45,11 @@ abstract final class AppColors {
   static const Color textSecondary = Color(0xFF5B6577);
   static const Color textOnPrimary = Colors.white;
 
+  // Self-assessed knowledge (the kana board): yellow for "somewhat know",
+  // green for "fully know".
+  static const Color somewhatKnown = Color(0xFFF5B90F);
+  static const Color fullyKnown = Color(0xFF22B573);
+
   // Semantic.
   static const Color error = Color(0xFFB3261E);
   static const Color success = Color(0xFF188857);

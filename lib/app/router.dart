@@ -11,6 +11,7 @@ import 'package:ingrain/features/content/presentation/view/player/immersion_play
 import 'package:ingrain/features/dialogue/presentation/view/dialogue_reader_view.dart';
 import 'package:ingrain/features/immersion/presentation/view/immersion_home_view.dart';
 import 'package:ingrain/features/kana/presentation/kana_view.dart';
+import 'package:ingrain/features/profile/presentation/edit_profile_view.dart';
 import 'package:ingrain/features/profile/presentation/profile_view.dart';
 import 'package:ingrain/features/search/presentation/view/search_view.dart';
 import 'package:ingrain/features/srs/presentation/view/deck_detail_view.dart';
@@ -21,13 +22,16 @@ import 'package:ingrain/features/vocabulary/presentation/view/vocabulary_view.da
 import 'package:ingrain/shared/widgets/double_back_to_exit.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
-  final authState = ref.watch(authViewModelProvider);
+  // Only what the redirect needs: a new router is built whenever this changes,
+  // so watching the whole state would reset navigation on every profile edit.
+  final (isLoading, isOnboarded) = ref.watch(
+    authViewModelProvider.select((auth) => (auth.isLoading, auth.isOnboarded)),
+  );
 
   return GoRouter(
     initialLocation: '/onboarding',
     redirect: (context, state) {
-      if (authState.isLoading) return null;
-      final isOnboarded = authState.isOnboarded;
+      if (isLoading) return null;
       final location = state.uri.toString();
       if (!isOnboarded && location != '/onboarding') {
         return '/onboarding';
@@ -102,6 +106,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         ),
       ),
       GoRoute(path: '/search', builder: (context, state) => const SearchView()),
+      GoRoute(
+        path: '/profile/edit',
+        builder: (context, state) => const EditProfileView(),
+      ),
       GoRoute(
         path: '/vocabulary',
         builder: (context, state) => const VocabularyView(),

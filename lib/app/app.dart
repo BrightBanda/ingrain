@@ -4,6 +4,7 @@ import 'package:ingrain/app/router.dart';
 import 'package:ingrain/app/theme/app_theme.dart';
 import 'package:ingrain/app/theme/theme_controller.dart';
 import 'package:ingrain/core/lifecycle.dart';
+import 'package:ingrain/features/profile/presentation/viewmodel/profile_sync_providers.dart';
 
 class IngrApp extends ConsumerWidget {
   const IngrApp({super.key});
@@ -13,6 +14,8 @@ class IngrApp extends ConsumerWidget {
     final themeMode = ref.watch(themeControllerProvider);
     final router = ref.watch(appRouterProvider);
     ref.watch(appLifecycleObserverProvider);
+    // Keeps the server's copy of the profile current and counts visits.
+    ref.watch(activityTrackerProvider);
 
     return MaterialApp.router(
       title: 'ingrain',

@@ -10,6 +10,7 @@ import 'package:ingrain/features/auth/data/user_profile_dto.dart';
 import 'package:ingrain/features/auth/domain/auth_repository.dart';
 import 'package:ingrain/features/auth/domain/auth_state.dart';
 import 'package:ingrain/features/auth/domain/user_profile.dart';
+import 'package:ingrain/features/profile/domain/learner_preferences.dart';
 
 final authRepositoryProvider = Provider<AuthSession>((ref) {
   return FirebaseAuthRepository(
@@ -67,11 +68,24 @@ class AuthViewModel extends Notifier<AuthState> {
     }
     try {
       await _auth.ensureProfile();
-      final name = await _auth.profileDisplayName();
+      final profile = UserProfileDto.fromMapSafe(await _auth.profileDocument());
       // The stream outlives any single listener: a sign-out or a provider rebuild
       // can dispose this notifier while the profile read is still in flight.
       if (!ref.mounted) return;
-      state = AuthState.ready(uid: uid, displayName: name);
+      final name = profile?.displayName;
+      state = AuthState.ready(
+        uid: uid,
+        displayName: name != null && name.trim().isNotEmpty ? name : null,
+        profile: profile,
+      );
+      // Best effort: "last active" is a statistic, not worth failing over.
+      unawaited(
+        _auth
+            .updateProfile({
+              'lastActiveAt': DateTime.now().toUtc().toIso8601String(),
+            })
+            .catchError((Object _) {}),
+      );
     } catch (error) {
       if (!ref.mounted) return;
       state = AuthState.ready(
@@ -103,7 +117,11 @@ class AuthViewModel extends Notifier<AuthState> {
   /// Returns whether a session is now active — a dismissed account chooser reports
   /// false without setting an error.
   Future<bool> _runSignIn(Future<bool> Function() action) async {
-    state = AuthState.ready(uid: state.uid, displayName: state.displayName);
+    state = AuthState.ready(
+      uid: state.uid,
+      displayName: state.displayName,
+      profile: state.profile,
+    );
     try {
       return await action();
     } on FirebaseAuthException catch (error) {
@@ -124,24 +142,74 @@ class AuthViewModel extends Notifier<AuthState> {
     }
   }
 
-  /// Keeps its signature: onboarding calls it once the user has chosen a name.
+  /// Stores every onboarding answer and marks the learner onboarded.
   ///
-  /// Flip the session to onboarded before the name write finishes so the router
-  /// can leave the onboarding screen even if Firestore is slow or temporarily
-  /// unavailable. The write is still attempted, but the UI must not block on it.
-  Future<void> completeOnboarding({required String displayName}) async {
-    final safeName = displayName.trim();
-    state = AuthState.ready(uid: state.uid, displayName: safeName, error: null);
+  /// Flip the session to onboarded before the writes finish so the router can
+  /// leave the onboarding screen even if Firestore is slow or temporarily
+  /// unavailable. The writes are still attempted, but the UI must not block on
+  /// them.
+  Future<void> completeOnboarding({
+    required String displayName,
+    String? avatarId,
+    JlptLevel? level,
+    List<LearningReason> learningReasons = const [],
+    List<ContentInterest> interests = const [],
+  }) async {
+    final now = DateTime.now().toUtc();
+    final base = state.profile ?? UserProfile(uid: state.uid, createdAt: now);
+    await _saveProfile(
+      base.copyWith(
+        displayName: () => displayName.trim(),
+        avatarId: () => avatarId ?? base.avatarId,
+        level: () => level ?? base.level,
+        learningReasons: learningReasons,
+        interests: interests,
+        onboardingCompletedAt: () => now,
+        onboardingVersion: UserProfile.currentOnboardingVersion,
+      ),
+    );
+  }
+
+  /// Saves an edited profile (name, avatar, level, reasons, interests).
+  Future<void> updateProfile(UserProfile profile) => _saveProfile(
+    profile.copyWith(displayName: () => profile.displayName?.trim()),
+  );
+
+  Future<void> _saveProfile(UserProfile profile) async {
+    final name = profile.displayName;
+    final nameChanged = name != null && name != state.displayName;
+    state = AuthState.ready(
+      uid: state.uid,
+      displayName: name,
+      profile: profile,
+    );
     try {
-      await _auth.setDisplayName(safeName);
+      if (nameChanged) await _auth.setDisplayName(name);
+      await _auth.updateProfile(UserProfileDto.learnerFields(profile));
     } catch (error) {
-      state = AuthState.ready(
-        uid: state.uid,
-        displayName: safeName,
-        error: 'Could not save your name: $error',
-      );
+      if (ref.mounted) {
+        state = AuthState.ready(
+          uid: state.uid,
+          displayName: name,
+          profile: profile,
+          error: 'Could not save your profile: $error',
+        );
+      }
       rethrow;
     }
+  }
+
+  /// Records the tier the server reported. The app never stores or sets a tier
+  /// itself; it only shows what the server says.
+  void applySubscriptionTier(SubscriptionTier tier) {
+    final profile = state.profile;
+    if (profile == null || profile.subscriptionTier == tier) return;
+    state = AuthState.ready(
+      uid: state.uid,
+      displayName: state.displayName,
+      profile: profile.copyWith(subscriptionTier: tier),
+      error: state.error,
+    );
   }
 
   /// Reads the stored `createdAt` rather than stamping "now" on every read.
@@ -152,7 +220,11 @@ class AuthViewModel extends Notifier<AuthState> {
 
   Future<void> refresh() async {
     final uid = await _auth.ensureUid();
-    state = AuthState.ready(uid: uid, displayName: await _auth.displayName);
+    state = AuthState.ready(
+      uid: uid,
+      displayName: await _auth.displayName,
+      profile: UserProfileDto.fromMapSafe(await _auth.profileDocument()),
+    );
   }
 
   /// A plain sign-out. User data in Firestore is deliberately left intact.

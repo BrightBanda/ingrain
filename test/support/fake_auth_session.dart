@@ -7,7 +7,18 @@ import 'package:ingrain/features/auth/domain/auth_repository.dart';
 /// Firebase cannot initialise in a unit or widget test, so every test that pumps a
 /// real screen needs one of these in place of `authRepositoryProvider`.
 class FakeAuthSession implements AuthSession {
-  FakeAuthSession({this.uid = 'test-uid', this.name = 'Tester'});
+  FakeAuthSession({
+    this.uid = 'test-uid',
+    this.name = 'Tester',
+    this.onboarded = true,
+  });
+
+  /// Whether a stored [name] comes with a completed onboarding. False models a
+  /// learner who signed up before the onboarding flow existed.
+  bool onboarded;
+
+  /// Everything written with [updateProfile], merged over the seeded document.
+  final Map<String, dynamic> profileFields = {};
 
   /// Empty means signed out, which is what sends the router to `/onboarding`.
   String uid;
@@ -62,9 +73,24 @@ class FakeAuthSession implements AuthSession {
   Future<String?> profileDisplayName() async => name;
 
   @override
-  Future<Map<String, dynamic>> profileDocument() async => name == null
-      ? <String, dynamic>{}
-      : {'uid': uid, 'displayName': name, 'createdAt': createdAt.toIso8601String()};
+  Future<Map<String, dynamic>> profileDocument() async {
+    if (name == null && profileFields.isEmpty) return <String, dynamic>{};
+    return {
+      'uid': uid,
+      'createdAt': createdAt.toIso8601String(),
+      if (name != null && onboarded)
+        'onboardingCompletedAt': createdAt.toIso8601String(),
+      ...profileFields,
+      if (name != null) 'displayName': name,
+    };
+  }
+
+  @override
+  Future<void> updateProfile(Map<String, dynamic> fields) async {
+    profileFields.addAll(fields);
+    final newName = fields['displayName'];
+    if (newName is String) name = newName;
+  }
 
   @override
   Future<void> ensureProfile() async => ensureProfileCalls++;

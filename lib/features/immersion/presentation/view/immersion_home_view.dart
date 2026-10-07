@@ -3,12 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ingrain/app/theme/app_colors.dart';
 import 'package:ingrain/features/auth/presentation/viewmodel/auth_view_model.dart';
+import 'package:ingrain/features/catalog/presentation/viewmodel/catalog_providers.dart';
+import 'package:ingrain/features/catalog/presentation/widgets/daily_picks_section.dart';
 import 'package:ingrain/features/content/domain/content_item.dart';
 import 'package:ingrain/features/content/presentation/view/add_content_type.dart';
 import 'package:ingrain/features/content/presentation/viewmodel/content_view_model.dart';
 import 'package:ingrain/features/dialogue/domain/dialogue.dart';
 import 'package:ingrain/features/dialogue/presentation/viewmodel/dialogue_providers.dart';
 import 'package:ingrain/features/progress/domain/progress_summary.dart';
+import 'package:ingrain/features/profile/presentation/widgets/learner_avatar.dart';
 import 'package:ingrain/features/progress/presentation/viewmodel/progress_view_model.dart';
 import 'package:ingrain/shared/widgets/colorful.dart';
 
@@ -42,6 +45,12 @@ class ImmersionHomeView extends ConsumerWidget {
             ref.refresh(contentViewModelProvider.future),
             ref.read(dialogueListViewModelProvider.notifier).refresh(),
             ref.read(progressViewModelProvider.notifier).refresh(),
+            ref
+                .refresh(dailyPicksProvider.future)
+                .then<void>((_) {}, onError: (_) {}),
+            ref
+                .refresh(levelVideosProvider.future)
+                .then<void>((_) {}, onError: (_) {}),
           ]);
         },
         child: contentList.when(
@@ -74,17 +83,28 @@ class ImmersionHomeView extends ConsumerWidget {
       children: [
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 4),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          child: Row(
             children: [
-              Text(
-                name == null || name.isEmpty ? 'おかえり!' : 'おかえり, $name',
-                style: theme.textTheme.headlineSmall,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name == null || name.isEmpty ? 'おかえり!' : 'おかえり, $name',
+                      style: theme.textTheme.headlineSmall,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Pick up where you left off, or try something new.',
+                      style: theme.textTheme.bodyMedium,
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(height: 2),
-              Text(
-                'Pick up where you left off, or try something new.',
-                style: theme.textTheme.bodyMedium,
+              const SizedBox(width: 12),
+              GestureDetector(
+                onTap: () => context.go('/profile'),
+                child: const LearnerAvatar(size: 52, rounded: true),
               ),
             ],
           ),
@@ -97,16 +117,19 @@ class ImmersionHomeView extends ConsumerWidget {
         ),
         const SizedBox(height: 12),
         _Shortcuts(dueCount: summary?.dueCount),
-        const SectionHeader('Recommended video'),
-        video == null
-            ? _PromptTile(
-                color: AppColors.video,
-                icon: Icons.smart_display_outlined,
-                title: 'Add your first YouTube video',
-                subtitle: 'Paste a link and the transcript comes with it',
-                onTap: () => context.push(AddContentType.youtube.route),
-              )
-            : _VideoHeroCard(item: video),
+        DailyPicksSection(
+          // Offline with nothing cached: fall back to the learner's own library.
+          fallback: video == null
+              ? _PromptTile(
+                  color: AppColors.video,
+                  icon: Icons.smart_display_outlined,
+                  title: 'Add your first YouTube video',
+                  subtitle: 'Paste a link and the transcript comes with it',
+                  onTap: () => context.push(AddContentType.youtube.route),
+                )
+              : _VideoHeroCard(item: video),
+        ),
+        const LevelShelf(),
         SectionHeader(
           'Dialogue of the day',
           onAction: () => context.go('/library'),
@@ -159,8 +182,8 @@ List<ContentItem> recentContent(List<ContentItem> items, {required int limit}) {
 
 /// The video the user has spent the least time with, newest first on ties.
 ///
-/// There is no video catalogue yet, so this recommends from the user's own
-/// library: whatever they added but have barely watched.
+/// The fallback when today's catalogue picks cannot be loaded: whatever the
+/// learner added to their own library but has barely watched.
 @visibleForTesting
 ContentItem? recommendedVideo(List<ContentItem> items) {
   if (items.isEmpty) return null;

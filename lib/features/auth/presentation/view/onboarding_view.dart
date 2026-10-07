@@ -1,19 +1,16 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ingrain/app/theme/app_colors.dart';
 import 'package:ingrain/features/auth/presentation/viewmodel/auth_view_model.dart';
-import 'package:ingrain/features/settings/domain/app_settings.dart';
-import 'package:ingrain/features/settings/presentation/viewmodel/settings_view_model.dart';
+import 'package:ingrain/features/onboarding/presentation/view/onboarding_flow_view.dart';
 import 'package:ingrain/shared/widgets/colorful.dart';
 import 'package:ingrain/shared/widgets/double_back_to_exit.dart';
 
-/// Doubles as the sign-in screen and the display-name step.
+/// Doubles as the sign-in screen and the entry to the onboarding questions.
 ///
 /// The router sends anyone who is not `isOnboarded` here, so all three states have
-/// to be reachable from this one view: signed out, signed in but unnamed, and the
-/// brief moment before the redirect fires.
+/// to be reachable from this one view: signed out, signed in but not onboarded,
+/// and the brief moment before the redirect fires.
 class OnboardingView extends ConsumerStatefulWidget {
   const OnboardingView({super.key});
 
@@ -22,10 +19,7 @@ class OnboardingView extends ConsumerStatefulWidget {
 }
 
 class _OnboardingViewState extends ConsumerState<OnboardingView> {
-  final _nameFormKey = GlobalKey<FormState>();
   final _signInFormKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
-  final _goalController = TextEditingController(text: '30');
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
@@ -33,25 +27,7 @@ class _OnboardingViewState extends ConsumerState<OnboardingView> {
   bool _busy = false;
 
   @override
-  void initState() {
-    super.initState();
-    // Pre-fill with whatever the provider already knows: the Google display name,
-    // or the email local part. Saves a field the user would otherwise retype.
-    _prefillName();
-  }
-
-  Future<void> _prefillName() async {
-    final suggested = await ref
-        .read(authViewModelProvider.notifier)
-        .suggestedDisplayName();
-    if (!mounted || suggested == null) return;
-    _nameController.text = suggested;
-  }
-
-  @override
   void dispose() {
-    _nameController.dispose();
-    _goalController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
@@ -65,27 +41,6 @@ class _OnboardingViewState extends ConsumerState<OnboardingView> {
     } finally {
       if (mounted) setState(() => _busy = false);
     }
-  }
-
-  Future<void> _submitName() async {
-    if (!_nameFormKey.currentState!.validate()) return;
-    final name = _nameController.text.trim();
-    final goal = int.parse(_goalController.text);
-
-    await _run(() async {
-      final authVm = ref.read(authViewModelProvider.notifier);
-      final settingsVm = ref.read(settingsViewModelProvider.notifier);
-      final current = ref.read(settingsViewModelProvider).settings;
-      final nextSettings = (current ?? const AppSettings()).copyWith(
-        dailyGoalMinutes: goal,
-      );
-
-      // Mark the session as onboarded immediately so the router can leave the
-      // onboarding screen even if the Firestore writes are slow or temporarily
-      // blocked. The settings save still runs in the background afterwards.
-      unawaited(authVm.completeOnboarding(displayName: name));
-      unawaited(settingsVm.update(nextSettings));
-    });
   }
 
   Future<void> _submitCredentials() async {
@@ -112,6 +67,7 @@ class _OnboardingViewState extends ConsumerState<OnboardingView> {
     if (authState.isLoading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
+    if (authState.isSignedIn) return const OnboardingFlowView();
 
     return DoubleBackToExit(
       child: Scaffold(
@@ -122,9 +78,7 @@ class _OnboardingViewState extends ConsumerState<OnboardingView> {
         body: Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(24),
-            child: authState.isSignedIn
-                ? _buildNameStep(theme)
-                : _buildSignInStep(theme, authState.error),
+            child: _buildSignInStep(theme, authState.error),
           ),
         ),
       ),
@@ -246,61 +200,6 @@ class _OnboardingViewState extends ConsumerState<OnboardingView> {
                   : 'New here? Create an account',
             ),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildNameStep(ThemeData theme) {
-    return Form(
-      key: _nameFormKey,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _badge(theme),
-          const SizedBox(height: 24),
-          Text('Almost there', style: theme.textTheme.headlineSmall),
-          const SizedBox(height: 8),
-          Text(
-            'Pick a display name and a daily immersion goal to get started.',
-            textAlign: TextAlign.center,
-            style: theme.textTheme.bodyMedium,
-          ),
-          const SizedBox(height: 24),
-          TextFormField(
-            controller: _nameController,
-            decoration: const InputDecoration(
-              labelText: 'Display name',
-              prefixIcon: Icon(Icons.person_outline),
-            ),
-            validator: (v) =>
-                (v == null || v.trim().isEmpty) ? 'Enter a name' : null,
-          ),
-          const SizedBox(height: 16),
-          TextFormField(
-            controller: _goalController,
-            decoration: const InputDecoration(
-              labelText: 'Daily goal (minutes)',
-              prefixIcon: Icon(Icons.timer_outlined),
-            ),
-            keyboardType: TextInputType.number,
-            validator: (v) {
-              if (v == null || v.isEmpty) return 'Enter a goal';
-              final n = int.tryParse(v);
-              if (n == null || n <= 0) return 'Enter a positive number';
-              return null;
-            },
-          ),
-          const SizedBox(height: 24),
-          _busy
-              ? const CircularProgressIndicator()
-              : FilledButton(
-                  onPressed: _submitName,
-                  style: FilledButton.styleFrom(
-                    minimumSize: const Size.fromHeight(48),
-                  ),
-                  child: const Text('Start using ingrain'),
-                ),
         ],
       ),
     );

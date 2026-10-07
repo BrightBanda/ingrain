@@ -1,6 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_core/firebase_core.dart';import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:http/http.dart' as http;
+import 'package:ingrain/core/network/api_client.dart';
 import 'package:ingrain/core/storage/document_store.dart';
 import 'package:ingrain/core/storage/firestore_document_store.dart';
 import 'package:ingrain/core/storage/local_document_store.dart';
@@ -37,4 +40,15 @@ final documentStoreProvider = Provider<DocumentStore>(
 /// cannot represent. Not for user data.
 final localDocumentStoreProvider = Provider<LocalDocumentStore>((ref) {
   return LocalDocumentStore(ref.watch(sharedPreferencesProvider));
+});
+
+/// The ingrain API, signed in as the current Firebase user.
+final apiClientProvider = Provider<ApiClient>((ref) {
+  final client = http.Client();
+  ref.onDispose(client.close);
+  final auth = ref.watch(firebaseAuthProvider);
+  return ApiClient(
+    client: client,
+    idToken: () async => auth.currentUser?.getIdToken(),
+  );
 });
