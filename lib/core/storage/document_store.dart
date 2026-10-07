@@ -23,6 +23,19 @@ abstract interface class DocumentStore {
 
   Future<void> deleteDoc(String uid, String collection, String docId);
 
+  /// Deletes many documents of one collection at once.
+  Future<void> deleteDocs(String uid, String collection, List<String> docIds);
+
+  /// Writes many documents of one collection at once, replacing each.
+  ///
+  /// For bulk work such as a deck import: thousands of single writes would
+  /// each wait for their own round trip.
+  Future<void> setDocs(
+    String uid,
+    String collection,
+    Map<String, Map<String, dynamic>> docs,
+  );
+
   /// Documents in [collection], in unspecified order.
   Future<List<Map<String, dynamic>>> listDocs(String uid, String collection);
 }

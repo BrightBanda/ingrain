@@ -22,6 +22,22 @@ class TranscriptParser {
     }
   }
 
+  /// Writes [sentences] back as SRT so editing raw text keeps the real
+  /// timings; plain text would be re-spread evenly over the duration.
+  static String toSrt(List<TranscriptSentence> sentences) {
+    String time(int seconds) {
+      final d = Duration(seconds: seconds);
+      String two(int n) => n.toString().padLeft(2, '0');
+      return '${two(d.inHours)}:${two(d.inMinutes % 60)}:'
+          '${two(d.inSeconds % 60)},000';
+    }
+
+    return [
+      for (final (i, s) in sentences.indexed)
+        '${i + 1}\n${time(s.startSeconds)} --> ${time(s.endSeconds)}\n${s.text}',
+    ].join('\n\n');
+  }
+
   static TranscriptFormat _detectFormat(String raw) {
     final trimmed = raw.trimLeft();
     if (trimmed.startsWith('WEBVTT')) {

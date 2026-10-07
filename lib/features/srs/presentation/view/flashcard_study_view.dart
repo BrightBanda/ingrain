@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ingrain/features/immersion/domain/immersion_session.dart';
+import 'package:ingrain/features/immersion/presentation/view/immersion_session_scope.dart';
 import 'package:ingrain/features/progress/presentation/viewmodel/progress_view_model.dart';
 import 'package:ingrain/features/srs/domain/review_card.dart';
 import 'package:ingrain/features/srs/presentation/viewmodel/review_view_model.dart';
@@ -34,28 +36,34 @@ class _FlashcardStudyViewState extends ConsumerState<FlashcardStudyView> {
         ? 0
         : session.total - session.currentIndex;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.title ?? 'Study'),
-        actions: [
-          if (remaining > 0)
-            Center(
-              child: Pill(
-                label: '$remaining due',
-                color: Theme.of(context).colorScheme.primary,
-                icon: Icons.style,
-                solid: true,
+    // Studying cards counts as immersion time too.
+    return ImmersionSessionScope(
+      sourceId: 'flashcards:${widget.deckId ?? 'all'}',
+      sourceTitle: widget.title ?? 'Flashcards',
+      activityType: ActivityType.reviewing,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(widget.title ?? 'Study'),
+          actions: [
+            if (remaining > 0)
+              Center(
+                child: Pill(
+                  label: '$remaining due',
+                  color: Theme.of(context).colorScheme.primary,
+                  icon: Icons.style,
+                  solid: true,
+                ),
               ),
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              tooltip: 'Refresh due cards',
+              onPressed: () =>
+                  ref.read(reviewViewModelProvider.notifier).refreshDue(),
             ),
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            tooltip: 'Refresh due cards',
-            onPressed: () =>
-                ref.read(reviewViewModelProvider.notifier).refreshDue(),
-          ),
-        ],
+          ],
+        ),
+        body: _buildBody(session),
       ),
-      body: _buildBody(session),
     );
   }
 
@@ -98,9 +106,8 @@ class _FlashcardStudyViewState extends ConsumerState<FlashcardStudyView> {
         if (session.answerShown)
           _RatingBar(
             onRate: (rating) => _submit(rating),
-            intervalFor: (rating) => ref
-                .read(reviewViewModelProvider.notifier)
-                .previewInterval(rating),
+            delayFor: (rating) =>
+                ref.read(reviewViewModelProvider.notifier).previewDelay(rating),
           ),
         const SizedBox(height: 12),
       ],
@@ -274,9 +281,9 @@ class _AnswerPanel extends StatelessWidget {
 
 class _RatingBar extends StatelessWidget {
   final ValueChanged<Rating> onRate;
-  final int Function(Rating) intervalFor;
+  final Duration Function(Rating) delayFor;
 
-  const _RatingBar({required this.onRate, required this.intervalFor});
+  const _RatingBar({required this.onRate, required this.delayFor});
 
   @override
   Widget build(BuildContext context) {
@@ -320,11 +327,7 @@ class _RatingBar extends StatelessWidget {
     );
   }
 
-  String _label(Rating rating) {
-    final days = intervalFor(rating);
-    if (days <= 0) return '10m';
-    return '${days}d';
-  }
+  String _label(Rating rating) => formatInterval(delayFor(rating));
 }
 
 class _RatingButton extends StatelessWidget {
@@ -376,4 +379,21 @@ class _RatingButton extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Anki's compact interval labels: 45s, 10m, 3h, 4d, 1.5mo, 2.1y.
+String formatInterval(Duration delay) {
+  final seconds = delay.inSeconds;
+  if (seconds < 60) return '${seconds < 1 ? 1 : seconds}s';
+  if (delay.inMinutes < 60) return '${delay.inMinutes}m';
+  if (delay.inHours < 24) return '${delay.inHours}h';
+  final days = delay.inHours / 24;
+  if (days < 30) return '${days.round()}d';
+  String oneDecimal(double value) {
+    final text = value.toStringAsFixed(1);
+    return text.endsWith('.0') ? text.substring(0, text.length - 2) : text;
+  }
+
+  if (days < 365) return '${oneDecimal(days / 30)}mo';
+  return '${oneDecimal(days / 365)}y';
 }

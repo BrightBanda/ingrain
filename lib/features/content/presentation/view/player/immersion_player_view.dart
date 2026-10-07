@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:ingrain/app/theme/app_colors.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:youtube_player_iframe/youtube_player_iframe.dart';
 import 'package:ingrain/core/utils/duration_format.dart';
 import 'package:ingrain/features/content/data/youtube_url_parser.dart';
@@ -38,6 +39,12 @@ class PlayerControllerNotifier extends Notifier<YoutubePlayerController?> {
   void setController(YoutubePlayerController? controller) {
     state = controller;
   }
+
+  /// Clears the controller only if it is still [controller], so a player
+  /// closing late never wipes out the one that replaced it.
+  void clearIfCurrent(YoutubePlayerController controller) {
+    if (identical(state, controller)) state = null;
+  }
 }
 
 class ImmersionPlayerView extends ConsumerStatefulWidget {
@@ -54,6 +61,8 @@ class _ImmersionPlayerViewState extends ConsumerState<ImmersionPlayerView> {
   late YoutubePlayerController _controller;
   StreamSubscription<YoutubeVideoState>? _videoStateSubscription;
   StreamSubscription<YoutubePlayerValue>? _playerStreamSubscription;
+  // Saved up front: `ref` must not be used once the screen starts closing.
+  late final PlayerControllerNotifier _controllerNotifier;
   bool _videoLoadStarted = false;
   bool _videoReady = false;
   bool _playerIsPlaying = false;
@@ -63,11 +72,15 @@ class _ImmersionPlayerViewState extends ConsumerState<ImmersionPlayerView> {
   @override
   void initState() {
     super.initState();
+    _controllerNotifier = ref.read(playerControllerProvider.notifier);
     _controller = YoutubePlayerController(
       params: const YoutubePlayerParams(
         showFullscreenButton: false,
         enableKeyboard: false,
         showControls: false,
+        // The app shows its own tappable Japanese transcript, so YouTube's
+        // burned-in captions would only duplicate (or contradict) it.
+        enableCaption: false,
         origin: 'https://www.youtube-nocookie.com',
         strictRelatedVideos: true,
       ),
@@ -140,7 +153,7 @@ class _ImmersionPlayerViewState extends ConsumerState<ImmersionPlayerView> {
     // Set controller in provider after first frame to avoid build-phase modification
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        ref.read(playerControllerProvider.notifier).setController(_controller);
+        _controllerNotifier.setController(_controller);
       }
     });
   }
@@ -166,7 +179,9 @@ class _ImmersionPlayerViewState extends ConsumerState<ImmersionPlayerView> {
     _videoStateSubscription?.cancel();
     _playerStreamSubscription?.cancel();
     _controller.close();
-    ref.read(playerControllerProvider.notifier).setController(null);
+    // Deferred: provider state cannot change while the tree is tearing down.
+    final controller = _controller;
+    Future.microtask(() => _controllerNotifier.clearIfCurrent(controller));
     super.dispose();
   }
 
@@ -322,6 +337,12 @@ class _ImmersionPlayerViewState extends ConsumerState<ImmersionPlayerView> {
       appBar: AppBar(
         title: const Text('ingrain'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.edit_note),
+            tooltip: 'Edit transcript',
+            onPressed: () =>
+                context.push('/content/${widget.contentId}/transcript'),
+          ),
           if (sessionState.isRunning && !sessionState.isPaused)
             const Padding(
               padding: EdgeInsets.only(right: 12),
@@ -332,6 +353,12 @@ class _ImmersionPlayerViewState extends ConsumerState<ImmersionPlayerView> {
       body: Column(
         children: [
           _buildPlayer(contentAsync),
+          _SeekBar(
+            controller: _controller,
+            fallbackDuration: Duration(
+              seconds: contentAsync.asData?.value.durationSeconds ?? 0,
+            ),
+          ),
           if (_playerError != null) _buildPlayerError(),
           _buildPlaybackControls(),
           _buildSessionControls(contentAsync, sessionState, sessionVm),
@@ -484,6 +511,72 @@ class _ImmersionPlayerViewState extends ConsumerState<ImmersionPlayerView> {
               icon: const Icon(Icons.stop),
               label: const Text('Stop session'),
             ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Position slider with elapsed and total time. Dragging only previews the
+/// position; the video seeks once, when the thumb is released.
+class _SeekBar extends ConsumerStatefulWidget {
+  final YoutubePlayerController controller;
+  final Duration fallbackDuration;
+
+  const _SeekBar({required this.controller, required this.fallbackDuration});
+
+  @override
+  ConsumerState<_SeekBar> createState() => _SeekBarState();
+}
+
+class _SeekBarState extends ConsumerState<_SeekBar> {
+  double? _dragSeconds;
+
+  @override
+  Widget build(BuildContext context) {
+    final position = ref.watch(playbackPositionProvider);
+    final reported = widget.controller.value.metaData.duration;
+    final duration = reported > Duration.zero
+        ? reported
+        : widget.fallbackDuration;
+    final total = duration.inMilliseconds / 1000;
+    final current = (_dragSeconds ?? position.inMilliseconds / 1000).clamp(
+      0.0,
+      total <= 0 ? 0.0 : total,
+    );
+    final labelStyle = Theme.of(context).textTheme.labelSmall;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 4, 12, 0),
+      child: Row(
+        children: [
+          Text(
+            formatDuration(Duration(seconds: current.round())),
+            style: labelStyle,
+          ),
+          Expanded(
+            child: SliderTheme(
+              data: SliderTheme.of(context).copyWith(
+                trackHeight: 3,
+                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7),
+                overlayShape: const RoundSliderOverlayShape(overlayRadius: 14),
+              ),
+              child: Slider(
+                value: current.toDouble(),
+                max: total <= 0 ? 1 : total,
+                onChanged: total <= 0
+                    ? null
+                    : (value) => setState(() => _dragSeconds = value),
+                onChangeEnd: total <= 0
+                    ? null
+                    : (value) async {
+                        await widget.controller.seekTo(seconds: value);
+                        if (mounted) setState(() => _dragSeconds = null);
+                      },
+              ),
+            ),
+          ),
+          Text(formatDuration(duration), style: labelStyle),
         ],
       ),
     );

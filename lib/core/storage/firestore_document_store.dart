@@ -46,6 +46,42 @@ class FirestoreDocumentStore implements DocumentStore {
         .set(data, SetOptions(merge: merge));
   }
 
+  /// Firestore's limit on writes in one batch.
+  static const maxBatchSize = 500;
+
+  @override
+  Future<void> setDocs(
+    String uid,
+    String collection,
+    Map<String, Map<String, dynamic>> docs,
+  ) async {
+    final entries = docs.entries.toList();
+    for (var start = 0; start < entries.length; start += maxBatchSize) {
+      final batch = _firestore.batch();
+      for (final entry in entries.skip(start).take(maxBatchSize)) {
+        final path = documentPath(uid, collection, entry.key);
+        assertFirestoreSafe(entry.value, path: path);
+        batch.set(_firestore.doc(path), entry.value);
+      }
+      await batch.commit();
+    }
+  }
+
+  @override
+  Future<void> deleteDocs(
+    String uid,
+    String collection,
+    List<String> docIds,
+  ) async {
+    for (var start = 0; start < docIds.length; start += maxBatchSize) {
+      final batch = _firestore.batch();
+      for (final id in docIds.skip(start).take(maxBatchSize)) {
+        batch.delete(_firestore.doc(documentPath(uid, collection, id)));
+      }
+      await batch.commit();
+    }
+  }
+
   @override
   Future<void> deleteDoc(String uid, String collection, String docId) async {
     await _firestore.doc(documentPath(uid, collection, docId)).delete();

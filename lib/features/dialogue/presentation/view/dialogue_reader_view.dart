@@ -6,6 +6,8 @@ import 'package:ingrain/features/dialogue/domain/dialogue.dart';
 import 'package:ingrain/features/dialogue/presentation/viewmodel/dialogue_providers.dart';
 import 'package:ingrain/features/dialogue/presentation/widgets/dialogue_token_row.dart';
 import 'package:ingrain/features/dialogue/presentation/widgets/speaker_label.dart';
+import 'package:ingrain/features/immersion/domain/immersion_session.dart';
+import 'package:ingrain/features/immersion/presentation/view/immersion_session_scope.dart';
 import 'package:ingrain/features/sentence_mining/presentation/view/sentence_save_sheet.dart';
 import 'package:ingrain/features/sentence_mining/presentation/viewmodel/sentence_mining_view_model.dart';
 import 'package:ingrain/features/srs/presentation/viewmodel/review_view_model.dart';
@@ -70,30 +72,36 @@ class DialogueReaderView extends ConsumerWidget {
             ],
           ),
         ),
-        data: (dialogue) => Column(
-          children: [
-            if (isCached) const _CachedDialogueNotice(),
-            Expanded(
-              child: ListView.separated(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
-                itemCount: dialogue.lines.length + 1,
-                separatorBuilder: (_, index) =>
-                    SizedBox(height: index == 0 ? 20 : 12),
-                itemBuilder: (context, index) {
-                  if (index == 0) return _DialogueHeader(dialogue: dialogue);
-                  final line = dialogue.lines[index - 1];
-                  return _DialogueLineCard(
-                    dialogue: dialogue,
-                    line: line,
-                    showRomaji: showRomaji,
-                    onTokenTap: (token) =>
-                        _openLookup(context, ref, dialogue, line, token),
-                    onMine: () => _mineLine(context, ref, dialogue, line),
-                  );
-                },
+        data: (dialogue) => ImmersionSessionScope(
+          // Reading counts as immersion while the dialogue is open.
+          sourceId: 'dialogue:${dialogue.id}',
+          sourceTitle: dialogue.title,
+          activityType: ActivityType.reading,
+          child: Column(
+            children: [
+              if (isCached) const _CachedDialogueNotice(),
+              Expanded(
+                child: ListView.separated(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+                  itemCount: dialogue.lines.length + 1,
+                  separatorBuilder: (_, index) =>
+                      SizedBox(height: index == 0 ? 20 : 12),
+                  itemBuilder: (context, index) {
+                    if (index == 0) return _DialogueHeader(dialogue: dialogue);
+                    final line = dialogue.lines[index - 1];
+                    return _DialogueLineCard(
+                      dialogue: dialogue,
+                      line: line,
+                      showRomaji: showRomaji,
+                      onTokenTap: (token) =>
+                          _openLookup(context, ref, dialogue, line, token),
+                      onMine: () => _mineLine(context, ref, dialogue, line),
+                    );
+                  },
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

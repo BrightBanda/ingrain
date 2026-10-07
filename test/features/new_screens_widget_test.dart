@@ -17,7 +17,6 @@ import 'package:ingrain/features/progress/presentation/view/progress_dashboard.d
 import 'package:ingrain/features/search/presentation/view/search_view.dart';
 import 'package:ingrain/features/sentence_mining/domain/sentence_item.dart';
 import 'package:ingrain/features/sentence_mining/domain/sentence_repository.dart';
-import 'package:ingrain/features/sentence_mining/presentation/view/sentence_mining_view.dart';
 import 'package:ingrain/features/sentence_mining/presentation/viewmodel/sentence_mining_view_model.dart';
 import 'package:ingrain/features/srs/domain/review_card.dart';
 import 'package:ingrain/features/srs/domain/review_event.dart';
@@ -133,6 +132,22 @@ class InMemoryReviewRepository implements ReviewRepository {
     );
     cards.add(card);
     return card;
+  }
+
+  @override
+  Future<void> saveCards(
+    List<ReviewCard> cards, {
+    void Function(int saved)? onProgress,
+  }) async {
+    for (final card in cards) {
+      await saveCard(card);
+    }
+    onProgress?.call(cards.length);
+  }
+
+  @override
+  Future<void> deleteCards(List<String> cardIds) async {
+    cards.removeWhere((card) => cardIds.contains(card.id));
   }
 
   @override
@@ -311,7 +326,14 @@ class EmptyImmersionRepository implements ImmersionRepository {
     String? sourceTitle,
     required ActivityType activityType,
     required DateTime startedAt,
-  }) => throw UnimplementedError();
+  }) async => ImmersionSession(
+    id: 'session-1',
+    uid: 'uid-1',
+    sourceId: sourceId,
+    sourceTitle: sourceTitle,
+    activityType: activityType,
+    startedAt: startedAt,
+  );
 
   @override
   Future<void> updateDuration(String sessionId, int durationSeconds) async {}
@@ -498,35 +520,6 @@ void main() {
     return container;
   }
 
-  group('SentenceMiningView', () {
-    testWidgets('shows the empty state with no mined sentences', (
-      tester,
-    ) async {
-      await pumpScreen(tester, const SentenceMiningView());
-
-      expect(find.text('Mined Sentences'), findsOneWidget);
-      expect(find.text('No mined sentences yet'), findsOneWidget);
-      expect(find.text('Add'), findsOneWidget);
-      expect(tester.takeException(), isNull);
-    });
-
-    testWidgets('lists a mined sentence with translation and source', (
-      tester,
-    ) async {
-      await pumpScreen(
-        tester,
-        const SentenceMiningView(),
-        sentences: [sampleSentence()],
-      );
-
-      expect(find.text('これはテストです。'), findsOneWidget);
-      expect(find.text('This is a test.'), findsOneWidget);
-      expect(find.text('My Video • 0:42'), findsOneWidget);
-      expect(find.text('No mined sentences yet'), findsNothing);
-      expect(tester.takeException(), isNull);
-    });
-  });
-
   group('FlashcardStudyView', () {
     testWidgets('shows the all caught up state when nothing is due', (
       tester,
@@ -559,8 +552,12 @@ void main() {
       for (final label in ['Again', 'Hard', 'Good', 'Easy']) {
         expect(find.text(label), findsOneWidget);
       }
+      // Anki-style waits under each answer for a new card.
+      for (final wait in ['1m', '5m', '10m', '4d']) {
+        expect(find.text(wait), findsOneWidget);
+      }
 
-      await tester.tap(find.text('Good'));
+      await tester.tap(find.text('Easy'));
       await tester.pumpAndSettle();
 
       expect(find.text('Session complete'), findsOneWidget);
@@ -690,7 +687,7 @@ void main() {
       expect(find.text('Reviewed today'), findsOneWidget);
 
       await scrollDashboardDown(tester);
-      expect(find.text('Browse mined sentences'), findsOneWidget);
+      expect(find.text('Browse mined phrases'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
 
@@ -707,7 +704,7 @@ void main() {
 
       await scrollDashboardDown(tester);
       expect(find.text('Review 1 due now'), findsOneWidget);
-      expect(find.text('Browse mined sentences'), findsOneWidget);
+      expect(find.text('Browse mined phrases'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
 

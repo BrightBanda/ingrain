@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:ingrain/features/sentence_mining/presentation/viewmodel/sentence_mining_view_model.dart';
 import 'package:ingrain/features/srs/domain/deck.dart';
 import 'package:ingrain/features/srs/domain/review_card.dart';
 import 'package:ingrain/features/srs/presentation/viewmodel/review_view_model.dart';
@@ -106,13 +107,25 @@ class DeckDetailView extends ConsumerWidget {
     final confirmed = await _confirm(
       context,
       title: 'Delete card?',
-      message: card.cardType == CardType.basic
-          ? 'This cannot be undone.'
-          : 'The card stops coming up for review. The saved sentence or '
-                'word itself is kept.',
+      message: switch (card.cardType) {
+        CardType.basic => 'This cannot be undone.',
+        CardType.sentence =>
+          'The mined sentence and its card are deleted. This cannot be '
+              'undone.',
+        CardType.vocabulary =>
+          'The card stops coming up for review. The word stays in Vocab.',
+      },
     );
     if (!confirmed) return;
-    await ref.read(deckRepositoryProvider).deleteCard(card);
+    // A mined sentence lives only here now, so deleting its card deletes it;
+    // a word still has the Vocab list, so only its card goes.
+    if (card.cardType == CardType.sentence) {
+      await ref
+          .read(sentenceMiningViewModelProvider.notifier)
+          .deleteSentence(card.sourceItemId);
+    } else {
+      await ref.read(deckRepositoryProvider).deleteCard(card);
+    }
     _refresh(ref);
   }
 
@@ -207,8 +220,9 @@ class _DeckHeader extends StatelessWidget {
           const SizedBox(height: 12),
           Row(
             children: [
-              _Stat(label: 'Due', value: summary.due),
               _Stat(label: 'New', value: summary.fresh),
+              _Stat(label: 'Learning', value: summary.learning),
+              _Stat(label: 'Due', value: summary.due),
               _Stat(label: 'Total', value: summary.total),
             ],
           ),
@@ -220,7 +234,7 @@ class _DeckHeader extends StatelessWidget {
                 backgroundColor: Colors.white,
                 foregroundColor: theme.colorScheme.primary,
               ),
-              onPressed: summary.due == 0
+              onPressed: summary.toStudy == 0
                   ? null
                   : () => context.push(
                       Uri(
@@ -230,7 +244,9 @@ class _DeckHeader extends StatelessWidget {
                     ),
               icon: const Icon(Icons.play_arrow_rounded),
               label: Text(
-                summary.due == 0 ? 'Nothing due' : 'Study ${summary.due} now',
+                summary.toStudy == 0
+                    ? 'Nothing to study today'
+                    : 'Study ${summary.toStudy} now',
               ),
             ),
           ),

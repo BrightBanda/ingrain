@@ -59,6 +59,7 @@ class LocalContentRepository implements ContentRepository {
         lastPositionSeconds: item.lastPositionSeconds,
         totalImmersionSeconds: item.totalImmersionSeconds,
         lastOpenedAt: item.lastOpenedAt,
+        durationSeconds: item.durationSeconds,
       ).map,
     );
   }

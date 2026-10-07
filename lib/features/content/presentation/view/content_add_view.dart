@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:ingrain/features/content/data/youtube_transcript_fetcher.dart';
-import 'package:ingrain/features/content/data/youtube_url_parser.dart';
 import 'package:ingrain/features/content/presentation/view/add_content_type.dart';
-import 'package:ingrain/features/content/presentation/viewmodel/content_view_model.dart';
+import 'package:ingrain/features/content/presentation/view/youtube_search_results.dart';
 import 'package:ingrain/features/dialogue/data/user_dialogue_repository.dart';
 import 'package:ingrain/features/dialogue/domain/dialogue_text_parser.dart';
 import 'package:ingrain/features/dialogue/presentation/viewmodel/dialogue_providers.dart';
@@ -27,6 +25,7 @@ class _ContentAddViewState extends ConsumerState<ContentAddView> {
   late AddContentType _type = widget.initialType;
   bool _isFetching = false;
   String? _fetchError;
+  String? _youtubeQuery;
 
   @override
   void dispose() {
@@ -40,7 +39,7 @@ class _ContentAddViewState extends ConsumerState<ContentAddView> {
     if (!_formKey.currentState!.validate()) return;
     switch (_type) {
       case AddContentType.youtube:
-        await _submitYoutube();
+        _searchYoutube();
       case AddContentType.dialogue:
         await _submitDialogue();
       case AddContentType.podcast:
@@ -72,81 +71,13 @@ class _ContentAddViewState extends ConsumerState<ContentAddView> {
     }
   }
 
-  Future<void> _submitYoutube() async {
-    final url = _urlController.text.trim();
-    final title = _titleController.text.trim();
-
-    final videoId = YoutubeUrlParser.tryParse(url);
-    if (videoId == null) {
-      setState(() {
-        _fetchError = 'Invalid YouTube URL or video ID. Please check the link.';
-      });
-      return;
-    }
-
-    setState(() {
-      _isFetching = true;
-      _fetchError = null;
-    });
-
-    try {
-      final fetcher = ref.read(youtubeTranscriptFetcherProvider);
-      final result = await fetcher.fetch(videoId);
-
-      if (!mounted) return;
-
-      final contentItem = await ref
-          .read(contentViewModelProvider.notifier)
-          .addContentWithTranscript(
-            sourceUrl: url,
-            title: title,
-            durationSeconds: result.durationSeconds,
-            transcriptText: result.transcriptText ?? '',
-          );
-
-      if (contentItem != null && mounted) {
-        if (result.transcriptText == null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                'This video has no Japanese subtitles. Paste a transcript '
-                'to read along.',
-              ),
-            ),
-          );
-        }
-        context.push(
-          '/content/${contentItem.id}/transcript',
-          extra: {
-            'transcript': result.transcriptText ?? '',
-            'duration': result.durationSeconds,
-          },
-        );
-      }
-    } on YoutubeTranscriptException catch (e) {
-      // Auto-fetch failed, fall back to manual entry
-      if (!mounted) return;
-      setState(() {
-        _fetchError = 'Auto-fetch failed: ${e.message}. You can add manually.';
-      });
-      final result = await ref
-          .read(contentViewModelProvider.notifier)
-          .addContent(sourceUrl: url, title: title);
-      if (result != null && mounted) {
-        context.push('/content/${result.id}/transcript');
-      }
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _fetchError = 'Error: $e';
-      });
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isFetching = false;
-        });
-      }
-    }
+  /// Shows YouTube results for what was typed: a link or id resolves to that
+  /// one video, anything else is a search.
+  void _searchYoutube() {
+    final query = _urlController.text.trim();
+    if (query.isEmpty) return;
+    FocusScope.of(context).unfocus();
+    setState(() => _youtubeQuery = query);
   }
 
   @override
@@ -195,37 +126,42 @@ class _ContentAddViewState extends ConsumerState<ContentAddView> {
                         }),
                 ),
                 const SizedBox(height: 16),
-                if (!isDialogue) ...[
+                if (!isDialogue)
                   TextFormField(
                     controller: _urlController,
-                    decoration: const InputDecoration(
-                      labelText: 'YouTube URL or ID',
-                      hintText: 'https://youtu.be/dQw4w9WgXcQ',
-                      prefixIcon: Icon(Icons.link),
+                    textInputAction: TextInputAction.search,
+                    onFieldSubmitted: (_) => _searchYoutube(),
+                    decoration: InputDecoration(
+                      labelText: 'Search YouTube or paste a link',
+                      hintText: '日本語 vlog, or https://youtu.be/…',
+                      prefixIcon: const Icon(Icons.search),
+                      suffixIcon: IconButton(
+                        tooltip: 'Search',
+                        icon: const Icon(Icons.arrow_forward),
+                        onPressed: _searchYoutube,
+                      ),
                     ),
                     validator: (v) {
                       if (v == null || v.trim().isEmpty) {
-                        return 'Enter a YouTube URL or video ID';
+                        return 'Type something to search, or paste a link';
                       }
                       return null;
                     },
                   ),
-                  const SizedBox(height: 16),
-                ],
-                TextFormField(
-                  controller: _titleController,
-                  decoration: const InputDecoration(
-                    labelText: 'Title',
-                    prefixIcon: Icon(Icons.title),
-                  ),
-                  validator: (v) {
-                    if (v == null || v.trim().isEmpty) {
-                      return 'Enter a title';
-                    }
-                    return null;
-                  },
-                ),
                 if (isDialogue) ...[
+                  TextFormField(
+                    controller: _titleController,
+                    decoration: const InputDecoration(
+                      labelText: 'Title',
+                      prefixIcon: Icon(Icons.title),
+                    ),
+                    validator: (v) {
+                      if (v == null || v.trim().isEmpty) {
+                        return 'Enter a title';
+                      }
+                      return null;
+                    },
+                  ),
                   const SizedBox(height: 16),
                   TextFormField(
                     controller: _dialogueController,
@@ -276,36 +212,38 @@ class _ContentAddViewState extends ConsumerState<ContentAddView> {
                     ),
                   ),
                 ],
-                const SizedBox(height: 24),
-                FilledButton(
-                  onPressed: _isFetching ? null : _submit,
-                  style: FilledButton.styleFrom(
-                    minimumSize: const Size.fromHeight(48),
-                  ),
-                  child: _isFetching
-                      ? Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                  Colors.white,
+                if (!isDialogue && _youtubeQuery != null) ...[
+                  const SizedBox(height: 8),
+                  YoutubeSearchResults(query: _youtubeQuery!),
+                ],
+                if (isDialogue) ...[
+                  const SizedBox(height: 24),
+                  FilledButton(
+                    onPressed: _isFetching ? null : _submit,
+                    style: FilledButton.styleFrom(
+                      minimumSize: const Size.fromHeight(48),
+                    ),
+                    child: _isFetching
+                        ? Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.white,
+                                  ),
                                 ),
                               ),
-                            ),
-                            const SizedBox(width: 12),
-                            Text(
-                              isDialogue
-                                  ? 'Saving dialogue...'
-                                  : 'Fetching transcript...',
-                            ),
-                          ],
-                        )
-                      : Text(isDialogue ? 'Save dialogue' : 'Add Content'),
-                ),
+                              const SizedBox(width: 12),
+                              const Text('Saving dialogue...'),
+                            ],
+                          )
+                        : const Text('Save dialogue'),
+                  ),
+                ],
               ],
             ),
           ),

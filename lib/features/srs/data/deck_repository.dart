@@ -32,10 +32,16 @@ class DeckRepository {
     return _fromMap(await _store.getDoc(uid, collection, id));
   }
 
-  Future<Deck> createDeck(String name, {String? description}) async {
+  /// [id] lets an import keep a stable id, so importing again updates the
+  /// same deck instead of adding another.
+  Future<Deck> createDeck(
+    String name, {
+    String? description,
+    String? id,
+  }) async {
     final uid = await _auth.ensureUid();
     final deck = Deck(
-      id: LocalReviewRepository.generateId('deck'),
+      id: id ?? LocalReviewRepository.generateId('deck'),
       name: name.trim(),
       description: _blankToNull(description),
       createdAt: DateTime.now(),
@@ -55,9 +61,9 @@ class DeckRepository {
   /// Deletes the deck and every card in it. Built-in decks are kept.
   Future<void> deleteDeck(Deck deck) async {
     if (deck.isBuiltIn) return;
-    for (final card in await cardsIn(deck.id)) {
-      await deleteCard(card);
-    }
+    await _cards.deleteCards([
+      for (final card in await cardsIn(deck.id)) card.id,
+    ]);
     final uid = await _auth.ensureUid();
     await _store.deleteDoc(uid, collection, deck.id);
   }

@@ -1,4 +1,5 @@
 import 'package:ingrain/features/srs/domain/review_card.dart';
+import 'package:ingrain/features/srs/domain/study_queue.dart';
 
 /// A named set of flashcards, like an Anki deck.
 class Deck {
@@ -29,29 +30,34 @@ class Deck {
   );
 }
 
-/// A deck with the counts its tile shows.
+/// A deck with Anki's three counts: new cards available today, cards in
+/// learning, and reviews due today (all within the daily limits).
 class DeckSummary {
   final Deck deck;
   final int total;
-  final int due;
-
-  /// Cards never reviewed yet.
   final int fresh;
+  final int learning;
+  final int due;
 
   const DeckSummary({
     required this.deck,
     required this.total,
-    required this.due,
     required this.fresh,
+    required this.learning,
+    required this.due,
   });
 
-  static DeckSummary of(Deck deck, List<ReviewCard> cards, DateTime now) {
-    final inDeck = cards.where((card) => card.deckId == deck.id);
+  /// Everything there is to study in this deck today.
+  int get toStudy => fresh + learning + due;
+
+  static DeckSummary of(Deck deck, List<ReviewCard> cards, StudyQueue queue) {
+    bool inDeck(ReviewCard card) => card.deckId == deck.id;
     return DeckSummary(
       deck: deck,
-      total: inDeck.length,
-      due: inDeck.where((card) => card.isDueAt(now)).length,
-      fresh: inDeck.where((card) => card.reviewCount == 0).length,
+      total: cards.where(inDeck).length,
+      fresh: queue.fresh.where(inDeck).length,
+      learning: queue.learning.where(inDeck).length,
+      due: queue.reviews.where(inDeck).length,
     );
   }
 }

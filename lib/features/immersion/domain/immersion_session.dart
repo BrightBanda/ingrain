@@ -1,4 +1,5 @@
-enum ActivityType { watching, listening, reading, speaking }
+/// `reviewing` is flashcard study.
+enum ActivityType { watching, listening, reading, speaking, reviewing }
 
 class ImmersionSession {
   final String id;

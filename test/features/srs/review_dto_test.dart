@@ -207,4 +207,42 @@ void main() {
       );
     });
   });
+
+  group('card state', () {
+    Map<String, dynamic> doc(Map<String, dynamic> extra) => {
+      'id': 'c',
+      'uid': 'u',
+      'cardType': 'basic',
+      'sourceItemId': 'c',
+      'promptText': '文',
+      'createdAt': '2026-01-01T00:00:00.000',
+      'dueAt': '2026-01-01T00:00:00.000',
+      ...extra,
+    };
+
+    test('round-trips state, step, lapses and suspension', () {
+      final card = ReviewCardDto.fromMap(
+        doc({'state': 'relearning', 'step': 1, 'lapses': 3, 'suspended': true}),
+      ).toDomain();
+      final again = ReviewCardDto.fromMap(ReviewCardDto.fromDomain(card).map)
+          .toDomain();
+
+      expect(
+        (again.state, again.step, again.lapses, again.suspended),
+        (CardState.relearning, 1, 3, true),
+      );
+    });
+
+    test('cards saved before states existed get one inferred', () {
+      CardState inferred(Map<String, dynamic> extra) =>
+          ReviewCardDto.fromMap(doc(extra)).toDomain().state;
+
+      expect(inferred({}), CardState.newCard);
+      expect(
+        inferred({'reviewCount': 2, 'intervalDays': 0}),
+        CardState.learning,
+      );
+      expect(inferred({'reviewCount': 2, 'intervalDays': 6}), CardState.review);
+    });
+  });
 }

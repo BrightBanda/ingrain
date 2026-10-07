@@ -1,191 +1,203 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ingrain/features/srs/domain/review_card.dart';
 import 'package:ingrain/features/srs/domain/srs_scheduler.dart';
+import 'package:ingrain/features/srs/domain/srs_settings.dart';
 
 void main() {
   const scheduler = SrsScheduler();
-  final start = DateTime(2026, 1, 1, 12, 0, 0);
+  final now = DateTime(2026, 1, 1, 12);
 
   ReviewCard card({
+    CardState state = CardState.newCard,
+    int step = 0,
     int intervalDays = 0,
-    int repetitions = 0,
-    double easeFactor = SrsScheduler.initialEaseFactor,
-    int reviewCount = 0,
+    double ease = 2.5,
+    DateTime? dueAt,
+    int lapses = 0,
   }) {
     return ReviewCard(
       id: 'card-1',
       uid: 'uid-1',
-      cardType: CardType.sentence,
-      sourceItemId: 'sentence-1',
+      cardType: CardType.basic,
+      sourceItemId: 'card-1',
       promptText: '日本語',
-      createdAt: start,
-      dueAt: start,
+      createdAt: now,
+      dueAt: dueAt ?? now,
+      state: state,
+      step: step,
       intervalDays: intervalDays,
-      repetitions: repetitions,
-      easeFactor: easeFactor,
-      reviewCount: reviewCount,
+      easeFactor: ease,
+      lapses: lapses,
     );
   }
 
-  group('SrsScheduler defaults', () {
-    test('new card is due immediately with SM-2 defaults', () {
+  Duration delay(ReviewCard c, Rating r) => scheduler.nextDelay(c, r, now);
+
+  group('new cards (steps 1m 10m)', () {
+    test('again, hard, good, easy wait 1m, 5.5m, 10m, 4d', () {
       final fresh = card();
-      expect(fresh.intervalDays, 0);
-      expect(fresh.repetitions, 0);
-      expect(fresh.easeFactor, 2.5);
-      expect(fresh.dueAt, start);
-      expect(fresh.reviewCount, 0);
+      expect(delay(fresh, Rating.again), const Duration(minutes: 1));
+      expect(delay(fresh, Rating.hard), const Duration(seconds: 330));
+      expect(delay(fresh, Rating.good), const Duration(minutes: 10));
+      expect(delay(fresh, Rating.easy), const Duration(days: 4));
     });
 
-    test('isDueAt is inclusive of the due instant', () {
-      final fresh = card();
-      expect(fresh.isDueAt(start), isTrue);
+    test('good moves to the next learning step', () {
+      final next = scheduler.schedule(card(), Rating.good, now);
+
+      expect(next.state, CardState.learning);
+      expect(next.step, 1);
+      expect(next.easeFactor, 2.5);
+      expect(next.reviewCount, 1);
+      expect(next.lastReviewedAt, now);
+    });
+
+    test('good on the last step graduates with the graduating interval', () {
+      final last = card(state: CardState.learning, step: 1);
+      final next = scheduler.schedule(last, Rating.good, now);
+
+      expect(next.state, CardState.review);
+      expect(next.intervalDays, 1);
+      expect(next.dueAt, now.add(const Duration(days: 1)));
+    });
+
+    test('easy graduates straight away with the easy interval', () {
+      final next = scheduler.schedule(card(), Rating.easy, now);
+
+      expect(next.state, CardState.review);
+      expect(next.intervalDays, 4);
+    });
+
+    test('again returns to the first step; hard repeats a later step', () {
+      final second = card(state: CardState.learning, step: 1);
+
+      expect(scheduler.schedule(second, Rating.again, now).step, 0);
+      expect(delay(second, Rating.hard), const Duration(minutes: 10));
+    });
+
+    test('a single step makes hard 1.5x that step', () {
+      const oneStep = SrsScheduler(
+        SrsSettings(learningSteps: [Duration(minutes: 10)]),
+      );
       expect(
-        fresh.isDueAt(start.subtract(const Duration(seconds: 1))),
-        isFalse,
+        oneStep.nextDelay(card(), Rating.hard, now),
+        const Duration(minutes: 15),
       );
+    });
+
+    test('new cards start at the configured starting ease', () {
+      const easier = SrsScheduler(SrsSettings(startingEase: 2.0));
+      expect(easier.schedule(card(ease: 2.5), Rating.good, now).easeFactor, 2);
     });
   });
 
-  group('SrsScheduler good', () {
-    test('first good schedules 1 day out', () {
-      final result = scheduler.schedule(card(), Rating.good, start);
-      expect(result.intervalDays, 1);
-      expect(result.repetitions, 1);
-      expect(result.dueAt, start.add(const Duration(days: 1)));
+  group('review cards', () {
+    final mature = card(state: CardState.review, intervalDays: 10);
+
+    test('hard ×1.2, good ×ease, easy ×ease×1.3', () {
+      expect(delay(mature, Rating.hard), const Duration(days: 12));
+      expect(delay(mature, Rating.good), const Duration(days: 25));
+      expect(delay(mature, Rating.easy), const Duration(days: 33));
     });
 
-    test('second good schedules 6 days out', () {
-      final result = scheduler.schedule(
-        card(intervalDays: 1, repetitions: 1),
-        Rating.good,
-        start,
+    test('hard and easy move ease; good keeps it', () {
+      expect(scheduler.schedule(mature, Rating.hard, now).easeFactor, 2.35);
+      expect(scheduler.schedule(mature, Rating.good, now).easeFactor, 2.5);
+      expect(scheduler.schedule(mature, Rating.easy, now).easeFactor, 2.65);
+    });
+
+    test('each answer is at least a day more than the one below it', () {
+      final young = card(state: CardState.review, intervalDays: 1, ease: 1.3);
+
+      expect(delay(young, Rating.hard).inDays, 2);
+      expect(delay(young, Rating.good).inDays, 3);
+      expect(delay(young, Rating.easy).inDays, 4);
+    });
+
+    test('an overdue card earns credit for the days it survived', () {
+      final overdue = card(
+        state: CardState.review,
+        intervalDays: 10,
+        dueAt: now.subtract(const Duration(days: 10)),
       );
-      expect(result.intervalDays, 6);
-      expect(result.dueAt, start.add(const Duration(days: 6)));
+
+      // (10 + 10 / 2) × 2.5
+      expect(delay(overdue, Rating.good), const Duration(days: 38));
     });
 
-    test('third good multiplies by the ease factor', () {
-      final result = scheduler.schedule(
-        card(intervalDays: 6, repetitions: 2),
-        Rating.good,
-        start,
+    test('again is a lapse: ease down, relearning, interval reset', () {
+      final lapsed = scheduler.schedule(mature, Rating.again, now);
+
+      expect(lapsed.state, CardState.relearning);
+      expect(lapsed.lapses, 1);
+      expect(lapsed.easeFactor, closeTo(2.3, 1e-9));
+      expect(lapsed.intervalDays, 1);
+      expect(lapsed.dueAt, now.add(const Duration(minutes: 10)));
+    });
+
+    test('ease never drops below 130%', () {
+      final hard = card(state: CardState.review, intervalDays: 5, ease: 1.35);
+
+      expect(scheduler.schedule(hard, Rating.again, now).easeFactor, 1.3);
+    });
+
+    test('the interval modifier and maximum interval apply', () {
+      const tuned = SrsScheduler(
+        SrsSettings(intervalModifier: 0.8, maximumIntervalDays: 20),
       );
-      expect(result.intervalDays, 15);
-      expect(result.dueAt, start.add(const Duration(days: 15)));
+
+      expect(tuned.nextDelay(mature, Rating.hard, now).inDays, 11);
+      expect(tuned.nextDelay(mature, Rating.good, now).inDays, 20);
+      expect(tuned.nextDelay(mature, Rating.easy, now).inDays, 20);
     });
 
-    test('good leaves the ease factor unchanged', () {
-      final result = scheduler.schedule(card(), Rating.good, start);
-      expect(result.easeFactor, 2.5);
+    test('a lapse keeps part of the interval when configured', () {
+      const kind = SrsScheduler(SrsSettings(lapseIntervalFactor: 0.5));
+
+      expect(kind.schedule(mature, Rating.again, now).intervalDays, 5);
     });
 
-    test('good increments review count and stamps lastReviewedAt', () {
-      final result = scheduler.schedule(card(), Rating.good, start);
-      expect(result.reviewCount, 1);
-      expect(result.lastReviewedAt, start);
+    test('without relearning steps a lapse stays in review', () {
+      const noRelearn = SrsScheduler(SrsSettings(relearningSteps: []));
+      final lapsed = noRelearn.schedule(mature, Rating.again, now);
+
+      expect(lapsed.state, CardState.review);
+      expect(lapsed.dueAt, now.add(const Duration(days: 1)));
     });
   });
 
-  group('SrsScheduler again', () {
-    test('again resets repetitions and interval and delays 10 minutes', () {
-      final result = scheduler.schedule(
-        card(intervalDays: 15, repetitions: 3, reviewCount: 3),
-        Rating.again,
-        start,
+  group('relearning cards', () {
+    test('good after the relearning step returns to review', () {
+      final relearning = card(
+        state: CardState.relearning,
+        intervalDays: 3,
+        ease: 2.3,
       );
-      expect(result.repetitions, 0);
-      expect(result.intervalDays, 0);
-      expect(result.dueAt, start.add(const Duration(minutes: 10)));
-      expect(result.reviewCount, 4);
-    });
+      final back = scheduler.schedule(relearning, Rating.good, now);
 
-    test('again still counts the review and stamps lastReviewedAt', () {
-      final result = scheduler.schedule(card(), Rating.again, start);
-      expect(result.reviewCount, 1);
-      expect(result.lastReviewedAt, start);
-    });
-
-    test('again penalty floors the ease factor at 1.3', () {
-      var current = card(easeFactor: 1.6);
-      current = scheduler.schedule(current, Rating.again, start);
-      expect(current.easeFactor, closeTo(1.4, 0.0001));
-      current = scheduler.schedule(current, Rating.again, start);
-      expect(current.easeFactor, 1.3);
-      current = scheduler.schedule(current, Rating.again, start);
-      expect(current.easeFactor, 1.3);
+      expect(back.state, CardState.review);
+      expect(back.intervalDays, 3);
+      expect(back.easeFactor, 2.3);
     });
   });
 
-  group('SrsScheduler hard', () {
-    test('hard multiplies the interval by 1.2 with a floor of 1', () {
-      final fromZero = scheduler.schedule(card(), Rating.hard, start);
-      expect(fromZero.intervalDays, 1);
-      expect(fromZero.dueAt, start.add(const Duration(days: 1)));
-
-      final fromTen = scheduler.schedule(
-        card(intervalDays: 10, repetitions: 2),
-        Rating.hard,
-        start,
-      );
-      expect(fromTen.intervalDays, 12);
-    });
-
-    test('hard increments repetitions and penalizes ease by 0.15', () {
-      final result = scheduler.schedule(
-        card(repetitions: 2),
-        Rating.hard,
-        start,
-      );
-      expect(result.repetitions, 3);
-      expect(result.easeFactor, closeTo(2.35, 0.0001));
-    });
-
-    test('hard ease floor is 1.3', () {
-      final result = scheduler.schedule(
-        card(easeFactor: 1.35),
-        Rating.hard,
-        start,
-      );
-      expect(result.easeFactor, 1.3);
-    });
-  });
-
-  group('SrsScheduler easy', () {
-    test('first easy jumps straight to 4 days', () {
-      final result = scheduler.schedule(card(), Rating.easy, start);
-      expect(result.intervalDays, 4);
-      expect(result.dueAt, start.add(const Duration(days: 4)));
-    });
-
-    test('easy multiplies interval by ease and 1.3 and bumps ease', () {
-      final result = scheduler.schedule(
-        card(intervalDays: 6, repetitions: 2),
-        Rating.easy,
-        start,
-      );
-      expect(result.intervalDays, 20);
-      expect(result.easeFactor, closeTo(2.65, 0.0001));
-    });
-
-    test('easy increments repetitions', () {
-      final result = scheduler.schedule(card(), Rating.easy, start);
-      expect(result.repetitions, 1);
-    });
-  });
-
-  group('SrsScheduler nextIntervalDays preview', () {
-    test('previews match the scheduled interval', () {
-      final fresh = card();
-      expect(scheduler.nextIntervalDays(fresh, Rating.again), 0);
-      expect(scheduler.nextIntervalDays(fresh, Rating.hard), 1);
-      expect(scheduler.nextIntervalDays(fresh, Rating.good), 1);
-      expect(scheduler.nextIntervalDays(fresh, Rating.easy), 4);
-
-      final mature = card(intervalDays: 15, repetitions: 4);
-      expect(scheduler.nextIntervalDays(mature, Rating.good), 38);
-      expect(scheduler.nextIntervalDays(mature, Rating.hard), 18);
-      expect(scheduler.nextIntervalDays(mature, Rating.easy), 49);
+  group('StepFormat', () {
+    test('formats and parses Anki step text', () {
+      const steps = [
+        Duration(minutes: 1),
+        Duration(minutes: 10),
+        Duration(hours: 1),
+        Duration(days: 1),
+      ];
+      expect(StepFormat.format(steps), '1m 10m 1h 1d');
+      expect(StepFormat.parse('1m 10m 1h 1d'), steps);
+      expect(StepFormat.parse('30s, 5'), const [
+        Duration(seconds: 30),
+        Duration(minutes: 5),
+      ]);
+      expect(StepFormat.parse(''), isEmpty);
+      expect(StepFormat.parse('10x'), isNull);
+      expect(StepFormat.parse('0m'), isNull);
     });
   });
 }

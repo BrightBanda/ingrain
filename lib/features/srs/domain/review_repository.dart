@@ -13,6 +13,13 @@ abstract interface class ReviewRepository {
 
   Future<void> saveCard(ReviewCard card);
 
+  /// Saves many cards in bulk (a deck import). [onProgress] is told how many
+  /// are saved so far.
+  Future<void> saveCards(
+    List<ReviewCard> cards, {
+    void Function(int saved)? onProgress,
+  });
+
   Future<List<ReviewCard>> listDue({DateTime? now});
 
   Future<List<ReviewCard>> listAllCards();
@@ -28,6 +35,9 @@ abstract interface class ReviewRepository {
   Future<List<ReviewEvent>> listReviewHistory({int limit});
 
   Future<void> deleteCardsForSource(String sourceItemId);
+
+  /// Deletes cards by id in bulk (deleting a whole deck).
+  Future<void> deleteCards(List<String> cardIds);
 
   Future<int> countDue({DateTime? now});
 }

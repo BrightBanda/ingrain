@@ -5,6 +5,7 @@ import 'package:ingrain/core/utils/duration_format.dart';
 import 'package:ingrain/features/content/domain/content_item.dart';
 import 'package:ingrain/features/search/domain/learning_search.dart';
 import 'package:ingrain/features/search/presentation/viewmodel/search_view_model.dart';
+import 'package:ingrain/features/srs/domain/review_card.dart';
 import 'package:ingrain/shared/widgets/colorful.dart';
 
 enum _Filter {
@@ -251,7 +252,8 @@ class _HitTile extends StatelessWidget {
       sentence.japanese,
       sentence.translation,
       _sourceLabel(sentence.sourceTitle, sentence.timestampSeconds),
-      _sourceRoute(sentence.sourceType, sentence.sourceId) ?? '/sentences',
+      _sourceRoute(sentence.sourceType, sentence.sourceId) ??
+          '/flashcards/deck/$minedPhrasesDeckId',
     ),
     ContentHit(:final content) => (
       Icons.smart_display,

@@ -4,6 +4,8 @@ import 'package:ingrain/features/srs/data/deck_repository.dart';
 import 'package:ingrain/features/srs/data/local_review_repository.dart';
 import 'package:ingrain/features/srs/domain/deck.dart';
 import 'package:ingrain/features/srs/domain/review_card.dart';
+import 'package:ingrain/features/srs/domain/srs_settings.dart';
+import 'package:ingrain/features/srs/domain/study_queue.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../support/fake_auth_repository.dart';
@@ -107,25 +109,44 @@ void main() {
     expect(listed.single.name, 'Mined phrases');
   });
 
-  test('summaries count due, new and total cards per deck', () {
-    final now = DateTime(2026, 5, 1);
-    ReviewCard card(String id, {required DateTime due, int reviews = 0}) =>
-        ReviewCard(
-          id: id,
-          uid: 'u',
-          cardType: CardType.basic,
-          sourceItemId: id,
-          promptText: id,
-          createdAt: DateTime(2026),
-          dueAt: due,
-          reviewCount: reviews,
-        );
+  test('summaries count new, learning and due cards per deck', () {
+    final now = DateTime(2026, 5, 1, 12);
+    ReviewCard card(
+      String id,
+      CardState state, {
+      required DateTime due,
+      String deck = minedPhrasesDeckId,
+    }) => ReviewCard(
+      id: id,
+      uid: 'u',
+      deckId: deck,
+      cardType: CardType.basic,
+      sourceItemId: id,
+      promptText: id,
+      createdAt: DateTime(2026),
+      dueAt: due,
+      state: state,
+    );
 
-    final summary = DeckSummary.of(Deck.minedPhrases, [
-      card('a', due: DateTime(2026, 4, 1)),
-      card('b', due: DateTime(2026, 6, 1), reviews: 3),
-    ], now);
+    final cards = [
+      card('new', CardState.newCard, due: now),
+      card('learning', CardState.learning, due: now),
+      card('due', CardState.review, due: DateTime(2026, 4, 1)),
+      card('later', CardState.review, due: DateTime(2026, 6, 1)),
+      card('elsewhere', CardState.newCard, due: now, deck: 'other'),
+    ];
+    final queue = StudyQueue.build(
+      cards: cards,
+      settings: const SrsSettings(),
+      now: now,
+    );
 
-    expect((summary.total, summary.due, summary.fresh), (2, 1, 1));
+    final summary = DeckSummary.of(Deck.minedPhrases, cards, queue);
+
+    expect(
+      (summary.total, summary.fresh, summary.learning, summary.due),
+      (4, 1, 1, 1),
+    );
+    expect(summary.toStudy, 3);
   });
 }

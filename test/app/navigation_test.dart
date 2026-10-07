@@ -6,6 +6,12 @@ import 'package:go_router/go_router.dart';
 import 'package:ingrain/app/router.dart';
 import 'package:ingrain/features/auth/domain/auth_state.dart';
 import 'package:ingrain/features/auth/presentation/viewmodel/auth_view_model.dart';
+import 'package:ingrain/features/content/data/youtube_transcript_fetcher.dart';
+import 'package:ingrain/features/content/domain/video_search.dart';
+import 'package:ingrain/features/content/presentation/view/youtube_search_results.dart';
+import 'package:ingrain/features/content/presentation/viewmodel/content_view_model.dart';
+import 'package:ingrain/features/immersion/domain/immersion_session.dart';
+import 'package:ingrain/features/immersion/presentation/viewmodel/immersion_session_view_model.dart';
 import 'package:ingrain/features/dialogue/domain/dialogue.dart';
 import 'package:ingrain/features/dialogue/domain/dialogue_repository.dart';
 import 'package:ingrain/features/dialogue/presentation/viewmodel/dialogue_providers.dart';
@@ -53,6 +59,40 @@ class NavigationDialogueRepository implements DialogueRepository {
   Future<void> cacheDialogue(Dialogue dialogue) async {}
 }
 
+class FakeVideoSearch implements VideoSearchRepository {
+  static const video = VideoSearchResult(
+    videoId: 'tokyoVlog01',
+    title: '東京 vlog',
+    channelTitle: 'Yuka',
+    thumbnailUrl: 'https://i.ytimg.com/vi/tokyoVlog01/mqdefault.jpg',
+    duration: Duration(minutes: 3),
+  );
+
+  /// Seven results: one page of five plus two behind "Show more".
+  @override
+  Future<List<VideoSearchResult>> search(String query) async => [
+    video,
+    for (var i = 2; i <= 7; i++)
+      VideoSearchResult(
+        videoId: 'otherVideo$i',
+        title: 'Other video $i',
+        thumbnailUrl: 'https://i.ytimg.com/vi/otherVideo$i/mqdefault.jpg',
+      ),
+  ];
+
+  @override
+  Future<VideoSearchResult?> lookup(String videoId) async => null;
+}
+
+class FakeTranscriptFetcher extends YoutubeTranscriptFetcher {
+  @override
+  Future<YoutubeTranscriptResult> fetch(String videoId) async =>
+      const YoutubeTranscriptResult(
+        durationSeconds: 180,
+        transcriptText: '00:00:01,000 --> 00:00:03,000\nこんにちは',
+      );
+}
+
 void main() {
   late List<MethodCall> platformCalls;
 
@@ -86,7 +126,10 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  Future<ProviderContainer> pumpApp(WidgetTester tester) async {
+  Future<ProviderContainer> pumpApp(
+    WidgetTester tester, {
+    List extraOverrides = const [],
+  }) async {
     SharedPreferences.setMockInitialValues({});
     final prefs = await SharedPreferences.getInstance();
 
@@ -99,6 +142,7 @@ void main() {
         ),
         // The real asset is decoded on a background isolate, which never
         // completes under the widget tester's fake async.
+        ...extraOverrides,
         dictionaryProvider.overrideWith(
           (ref) async => DictionaryIndex(const [
             DictionaryEntry(
@@ -134,9 +178,12 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  Finder learnMenuItem(String label) =>
+      find.widgetWithText(PopupMenuItem<LearnDestination>, label);
+
   Future<void> openLearn(WidgetTester tester, String destination) async {
     await tapTab(tester, 'Learn');
-    await tester.tap(find.text(destination));
+    await tester.tap(learnMenuItem(destination));
     await tester.pumpAndSettle();
   }
 
@@ -197,13 +244,13 @@ void main() {
       await pumpApp(tester);
 
       await tapTab(tester, 'Learn');
-      expect(find.text('Vocab'), findsOneWidget);
-      expect(find.text('Kana'), findsOneWidget);
-      final menuBottom = tester.getBottomLeft(find.text('Kana')).dy;
+      expect(learnMenuItem('Vocab'), findsOneWidget);
+      expect(learnMenuItem('Kana'), findsOneWidget);
+      final menuBottom = tester.getBottomLeft(learnMenuItem('Kana')).dy;
       final barTop = tester.getTopLeft(find.byType(NavigationBar)).dy;
       expect(menuBottom, lessThan(barTop));
 
-      await tester.tap(find.text('Kana'));
+      await tester.tap(learnMenuItem('Kana'));
       await tester.pumpAndSettle();
       expect(find.widgetWithText(AppBar, 'Kana'), findsOneWidget);
       expect(find.text('あ'), findsOneWidget);
@@ -244,10 +291,12 @@ void main() {
       await tapTab(tester, 'Flashcards');
       expect(find.text('Mined phrases'), findsOneWidget);
 
-      await tester.tap(find.byTooltip('Import deck'));
+      expect(find.byTooltip('Import Anki deck'), findsOneWidget);
+
+      await tester.tap(find.byTooltip('Flashcard settings'));
       await tester.pumpAndSettle();
-      expect(find.text('Import is coming soon'), findsOneWidget);
-      await tester.tap(find.text('OK'));
+      expect(find.text('New cards per day'), findsOneWidget);
+      await tester.tap(find.byType(BackButton));
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('New deck'));
@@ -280,7 +329,7 @@ void main() {
       expect(find.text('食べる'), findsOneWidget);
       await tester.tap(find.text('Show answer'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Good'));
+      await tester.tap(find.text('Easy'));
       await tester.pumpAndSettle();
       expect(find.text('Session complete'), findsOneWidget);
     });
@@ -305,7 +354,6 @@ void main() {
 
     for (final route in [
       '/vocabulary',
-      '/sentences',
       '/dialogues/lesson-1',
       '/flashcards/deck/mined-phrases',
     ]) {
@@ -315,6 +363,92 @@ void main() {
       await tester.tap(find.byType(BackButton));
       await tester.pumpAndSettle();
     }
+  });
+
+  group('youtube search', () {
+    testWidgets('search finds videos that can be added, then edited', (
+      tester,
+    ) async {
+      final container = await pumpApp(
+        tester,
+        extraOverrides: [
+          videoSearchRepositoryProvider.overrideWithValue(FakeVideoSearch()),
+          youtubeTranscriptFetcherProvider.overrideWithValue(
+            FakeTranscriptFetcher(),
+          ),
+        ],
+      );
+
+      await tester.tap(find.text('Add'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('YouTube video'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextFormField), 'vlog');
+      await tester.testTextInput.receiveAction(TextInputAction.search);
+      await tester.pumpAndSettle();
+
+      expect(find.text('東京 vlog'), findsOneWidget);
+      expect(find.text('Watch'), findsNWidgets(5));
+      expect(find.text('Other video 6'), findsNothing);
+
+      final page = find
+          .ancestor(
+            of: find.byType(YoutubeSearchResults),
+            matching: find.byType(Scrollable),
+          )
+          .first;
+      await tester.scrollUntilVisible(
+        find.text('Show more (2 left)'),
+        300,
+        scrollable: page,
+      );
+      await tester.tap(find.text('Show more (2 left)'));
+      await tester.pumpAndSettle();
+      expect(find.text('Watch'), findsNWidgets(7));
+      expect(find.textContaining('Show more'), findsNothing);
+      await tester.scrollUntilVisible(
+        find.text('東京 vlog'),
+        -300,
+        scrollable: page,
+      );
+
+      await tester.tap(find.text('Add to library').first);
+      await tester.pumpAndSettle();
+      expect(find.text('In library'), findsOneWidget);
+      final library = container.read(contentViewModelProvider).value!;
+      expect(library.single.title, '東京 vlog');
+
+      // Let the confirmation snack bar go before moving on.
+      await tester.pump(const Duration(seconds: 5));
+      await tester.pumpAndSettle();
+
+      GoRouter.of(tester.element(find.byType(Scaffold).last))
+          .push('/content/${library.single.id}/transcript');
+      await tester.pumpAndSettle();
+      expect(find.text('Lines (1)'), findsOneWidget);
+      expect(find.text('こんにちは'), findsOneWidget);
+      expect(find.text('Save'), findsOneWidget);
+    });
+  });
+
+  testWidgets('reading a dialogue is recorded as immersion', (tester) async {
+    final container = await pumpApp(tester);
+    await openLibrary(tester);
+    await tester.tap(find.text('Japanese dialogue'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('At the station'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(BackButton));
+    await tester.pumpAndSettle();
+
+    final sessions = await container
+        .read(immersionRepositoryProvider)
+        .watchRecentSessions()
+        .first;
+    expect(sessions.single.activityType, ActivityType.reading);
+    expect(sessions.single.sourceTitle, 'At the station');
+    expect(sessions.single.endedAt, isNotNull);
   });
 
   group('add content', () {
@@ -340,7 +474,7 @@ void main() {
       await tester.tap(find.text('YouTube video'));
       await tester.pumpAndSettle();
       expect(find.widgetWithText(AppBar, 'Add Content'), findsOneWidget);
-      expect(find.text('YouTube URL or ID'), findsOneWidget);
+      expect(find.text('Search YouTube or paste a link'), findsOneWidget);
     });
 
     testWidgets('a pasted dialogue is saved and opens in the reader', (
@@ -353,7 +487,7 @@ void main() {
       await tester.tap(find.text('Dialogue'));
       await tester.pumpAndSettle();
 
-      expect(find.text('YouTube URL or ID'), findsNothing);
+      expect(find.text('Search YouTube or paste a link'), findsNothing);
       await tester.enterText(
         find.widgetWithText(TextFormField, 'Title'),
         'My morning',

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ingrain/features/srs/domain/deck.dart';
+import 'package:ingrain/features/srs/presentation/view/anki_import_dialog.dart';
 import 'package:ingrain/features/srs/presentation/viewmodel/review_view_model.dart';
 import 'package:ingrain/shared/widgets/colorful.dart';
 
@@ -25,9 +26,14 @@ class FlashcardsView extends ConsumerWidget {
             onPressed: () => context.push('/search'),
           ),
           IconButton(
+            icon: const Icon(Icons.tune),
+            tooltip: 'Flashcard settings',
+            onPressed: () => context.push('/flashcards/settings'),
+          ),
+          IconButton(
             icon: const Icon(Icons.file_upload_outlined),
-            tooltip: 'Import deck',
-            onPressed: () => showImportComingSoon(context),
+            tooltip: 'Import Anki deck',
+            onPressed: () => startAnkiImport(context),
           ),
         ],
       ),
@@ -41,7 +47,7 @@ class FlashcardsView extends ConsumerWidget {
         error: (error, _) =>
             Center(child: Text('Could not load decks: $error')),
         data: (summaries) {
-          final due = summaries.fold<int>(0, (sum, s) => sum + s.due);
+          final due = summaries.fold<int>(0, (sum, s) => sum + s.toStudy);
           return RefreshIndicator(
             onRefresh: () => ref.refresh(deckSummariesProvider.future),
             child: ListView(
@@ -73,26 +79,6 @@ Future<void> createDeck(BuildContext context, WidgetRef ref) async {
       .read(deckRepositoryProvider)
       .createDeck(result.$1, description: result.$2);
   ref.invalidate(deckSummariesProvider);
-}
-
-void showImportComingSoon(BuildContext context) {
-  showDialog<void>(
-    context: context,
-    builder: (context) => AlertDialog(
-      icon: const Icon(Icons.file_upload_outlined),
-      title: const Text('Import is coming soon'),
-      content: const Text(
-        'Importing decks from files (like Anki exports) is not available '
-        'yet. For now, create a deck and add cards to it by hand.',
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('OK'),
-        ),
-      ],
-    ),
-  );
 }
 
 class _DueBanner extends StatelessWidget {
@@ -193,11 +179,20 @@ class _DeckTile extends StatelessWidget {
                       runSpacing: 4,
                       children: [
                         Pill(
+                          label: '${summary.fresh} new',
+                          color: primary,
+                          solid: summary.fresh > 0,
+                        ),
+                        Pill(
+                          label: '${summary.learning} learning',
+                          color: primary,
+                          solid: summary.learning > 0,
+                        ),
+                        Pill(
                           label: '${summary.due} due',
                           color: primary,
                           solid: summary.due > 0,
                         ),
-                        Pill(label: '${summary.fresh} new', color: primary),
                         Pill(label: '${summary.total} cards', color: primary),
                       ],
                     ),

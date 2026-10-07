@@ -80,6 +80,28 @@ class LocalDocumentStore implements DocumentStore {
   }
 
   @override
+  Future<void> setDocs(
+    String uid,
+    String collection,
+    Map<String, Map<String, dynamic>> docs,
+  ) async {
+    final coll = await _loadCollection(uid, collection);
+    coll.addAll(docs);
+    await _saveCollection(uid, collection, coll);
+  }
+
+  @override
+  Future<void> deleteDocs(
+    String uid,
+    String collection,
+    List<String> docIds,
+  ) async {
+    final coll = await _loadCollection(uid, collection);
+    docIds.forEach(coll.remove);
+    await _saveCollection(uid, collection, coll);
+  }
+
+  @override
   Future<void> deleteDoc(String uid, String collection, String docId) async {
     final coll = await _loadCollection(uid, collection);
     coll.remove(docId);

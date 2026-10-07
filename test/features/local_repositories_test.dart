@@ -6,6 +6,7 @@ import 'package:ingrain/features/sentence_mining/data/local_sentence_repository.
 import 'package:ingrain/features/srs/data/local_review_repository.dart';
 import 'package:ingrain/features/srs/domain/review_card.dart';
 import 'package:ingrain/features/srs/domain/srs_scheduler.dart';
+import 'package:ingrain/features/srs/domain/srs_settings.dart';
 import 'package:ingrain/features/vocabulary/data/local_vocabulary_repository.dart';
 import 'package:ingrain/features/vocabulary/domain/vocabulary_item.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -231,7 +232,7 @@ void main() {
         createdAt: now,
       );
 
-      expect(card.easeFactor, SrsScheduler.initialEaseFactor);
+      expect(card.easeFactor, const SrsSettings().startingEase);
       expect(card.intervalDays, 0);
       expect(card.repetitions, 0);
       expect(card.dueAt, now);
@@ -299,14 +300,16 @@ void main() {
       );
       expect(await reviews.countDue(now: now), 1);
 
-      final scheduled = scheduler.schedule(card, Rating.good, now);
+      // Easy graduates a new card straight to a 4-day interval.
+      final scheduled = scheduler.schedule(card, Rating.easy, now);
       await reviews.saveCard(scheduled);
 
       expect(await reviews.countDue(now: now), 0);
-      expect(await reviews.countDue(now: now.add(const Duration(days: 1))), 1);
+      expect(await reviews.countDue(now: now.add(const Duration(days: 4))), 1);
 
       final loaded = (await reviews.listAllCards()).single;
-      expect(loaded.intervalDays, 1);
+      expect(loaded.state, CardState.review);
+      expect(loaded.intervalDays, 4);
       expect(loaded.repetitions, 1);
       expect(loaded.reviewCount, 1);
       expect(loaded.lastReviewedAt, now);
@@ -335,8 +338,12 @@ void main() {
       );
       await reviews.saveCard(card);
 
+      // Good (learning step 2), Easy (graduates, 4 days), Again (a lapse).
       final loaded = (await reviews.listAllCards()).single;
-      expect(loaded.intervalDays, 0);
+      expect(loaded.state, CardState.relearning);
+      expect(loaded.lapses, 1);
+      expect(loaded.intervalDays, 1);
+      expect(loaded.easeFactor, closeTo(2.3, 1e-9));
       expect(loaded.repetitions, 0);
       expect(loaded.reviewCount, 3);
       expect(loaded.answerText, 'text');

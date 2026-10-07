@@ -14,6 +14,24 @@ class LocalReviewRepository implements ReviewRepository {
 
   LocalReviewRepository(this._store, this._auth);
 
+  /// Every card of [_cacheUid], loaded once and kept in step with each write.
+  /// Screens list all cards often; an imported Anki deck can hold thousands,
+  /// and re-reading them each time would burn through Firestore's daily read
+  /// quota. Keyed by user so a different sign-in never sees stale cards.
+  List<ReviewCard>? _cache;
+  String? _cacheUid;
+
+  /// Bulk saves go out in chunks this size, so progress can be reported.
+  static const saveChunkSize = 500;
+
+  void _remember(Iterable<ReviewCard> cards) {
+    final cache = _cache;
+    if (cache == null) return;
+    final byId = {for (final card in cards) card.id: card};
+    cache.removeWhere((card) => byId.containsKey(card.id));
+    cache.addAll(byId.values);
+  }
+
   static const String cardCollection = 'reviewCards';
   static const String historyCollection = 'reviewHistory';
 
@@ -45,6 +63,7 @@ class LocalReviewRepository implements ReviewRepository {
       dueAt: dueAt ?? created,
     );
     await _store.setDoc(uid, cardCollection, card.id, _toMap(card));
+    _remember([card]);
     return card;
   }
 
@@ -52,6 +71,23 @@ class LocalReviewRepository implements ReviewRepository {
   Future<void> saveCard(ReviewCard card) async {
     final uid = await _auth.ensureUid();
     await _store.setDoc(uid, cardCollection, card.id, _toMap(card));
+    _remember([card]);
+  }
+
+  @override
+  Future<void> saveCards(
+    List<ReviewCard> cards, {
+    void Function(int saved)? onProgress,
+  }) async {
+    final uid = await _auth.ensureUid();
+    for (var start = 0; start < cards.length; start += saveChunkSize) {
+      final chunk = cards.skip(start).take(saveChunkSize).toList();
+      await _store.setDocs(uid, cardCollection, {
+        for (final card in chunk) card.id: _toMap(card),
+      });
+      _remember(chunk);
+      onProgress?.call(start + chunk.length);
+    }
   }
 
   @override
@@ -66,8 +102,16 @@ class LocalReviewRepository implements ReviewRepository {
   @override
   Future<List<ReviewCard>> listAllCards() async {
     final uid = await _auth.ensureUid();
+    final cached = _cache;
+    if (cached != null && _cacheUid == uid) return List.of(cached);
     final docs = await _store.listDocs(uid, cardCollection);
-    return docs.map(ReviewCardDto.fromMapSafe).whereType<ReviewCard>().toList();
+    final cards = docs
+        .map(ReviewCardDto.fromMapSafe)
+        .whereType<ReviewCard>()
+        .toList();
+    _cache = cards;
+    _cacheUid = uid;
+    return List.of(cards);
   }
 
   @override
@@ -116,13 +160,20 @@ class LocalReviewRepository implements ReviewRepository {
 
   @override
   Future<void> deleteCardsForSource(String sourceItemId) async {
+    final ids = [
+      for (final card in await listAllCards())
+        if (card.sourceItemId == sourceItemId) card.id,
+    ];
+    await deleteCards(ids);
+  }
+
+  @override
+  Future<void> deleteCards(List<String> cardIds) async {
+    if (cardIds.isEmpty) return;
     final uid = await _auth.ensureUid();
-    final docs = await _store.listDocs(uid, cardCollection);
-    for (final doc in docs) {
-      if (doc['sourceItemId'] == sourceItemId) {
-        await _store.deleteDoc(uid, cardCollection, doc['id'] as String);
-      }
-    }
+    await _store.deleteDocs(uid, cardCollection, cardIds);
+    final gone = cardIds.toSet();
+    _cache?.removeWhere((card) => gone.contains(card.id));
   }
 
   @override
@@ -132,24 +183,8 @@ class LocalReviewRepository implements ReviewRepository {
     return cards.where((c) => c.isDueAt(at)).length;
   }
 
-  static Map<String, dynamic> _toMap(ReviewCard card) {
-    return ReviewCardDto(
-      id: card.id,
-      uid: card.uid,
-      deckId: card.deckId,
-      cardType: card.cardType,
-      sourceItemId: card.sourceItemId,
-      promptText: card.promptText,
-      answerText: card.answerText,
-      createdAt: card.createdAt,
-      dueAt: card.dueAt,
-      intervalDays: card.intervalDays,
-      repetitions: card.repetitions,
-      easeFactor: card.easeFactor,
-      reviewCount: card.reviewCount,
-      lastReviewedAt: card.lastReviewedAt,
-    ).map;
-  }
+  static Map<String, dynamic> _toMap(ReviewCard card) =>
+      ReviewCardDto.fromDomain(card).map;
 
   static String? _normalize(String? value) {
     if (value == null) return null;

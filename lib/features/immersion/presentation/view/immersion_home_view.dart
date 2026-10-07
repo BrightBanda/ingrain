@@ -433,9 +433,9 @@ class _Shortcuts extends StatelessWidget {
         Expanded(
           child: _ShortcutTile(
             color: AppColors.sentences,
-            icon: Icons.bookmark,
-            label: 'Sentences',
-            onTap: () => context.push('/sentences'),
+            icon: Icons.font_download_outlined,
+            label: 'Kana',
+            onTap: () => context.go('/learn/kana'),
           ),
         ),
       ],

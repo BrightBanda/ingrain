@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:ingrain/app/theme/app_colors.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ingrain/core/utils/duration_format.dart';
@@ -26,7 +27,16 @@ class TranscriptView extends ConsumerStatefulWidget {
 
 class _TranscriptViewState extends ConsumerState<TranscriptView> {
   final ScrollController _scrollController = ScrollController();
+  final Map<int, GlobalKey> _lineKeys = {};
   int? _lastScrolledIndex;
+  DateTime? _userScrolledAt;
+
+  /// After the learner scrolls by hand, auto-scroll waits this long before
+  /// pulling the list back to the current line.
+  static const _manualScrollGrace = Duration(seconds: 4);
+
+  /// Only used to reach a line that has not been built yet.
+  static const _estimatedLineHeight = 56.0;
 
   @override
   void dispose() {
@@ -34,6 +44,10 @@ class _TranscriptViewState extends ConsumerState<TranscriptView> {
     super.dispose();
   }
 
+  GlobalKey _keyFor(int index) => _lineKeys.putIfAbsent(index, GlobalKey.new);
+
+  /// Keeps the current line in the middle of the list: the highlight moves
+  /// down until it reaches the centre, then the text scrolls under it.
   void _maybeScrollToCurrent(
     List<TranscriptSentence> sentences,
     Duration position,
@@ -47,16 +61,37 @@ class _TranscriptViewState extends ConsumerState<TranscriptView> {
     );
     if (currentIndex < 0 || currentIndex == _lastScrolledIndex) return;
 
+    final scrolledAt = _userScrolledAt;
+    if (scrolledAt != null &&
+        DateTime.now().difference(scrolledAt) < _manualScrollGrace) {
+      return;
+    }
     _lastScrolledIndex = currentIndex;
-    final targetOffset = currentIndex * 68.0;
-    final maxOffset = _scrollController.position.maxScrollExtent;
-    final clampedOffset = targetOffset.clamp(0.0, maxOffset).toDouble();
 
-    _scrollController.animateTo(
-      clampedOffset,
-      duration: const Duration(milliseconds: 280),
-      curve: Curves.easeOutCubic,
+    final lineContext = _lineKeys[currentIndex]?.currentContext;
+    if (lineContext != null) {
+      Scrollable.ensureVisible(
+        lineContext,
+        alignment: 0.5,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOutCubic,
+      );
+      return;
+    }
+
+    // Far off screen, so not built yet: jump near it, then centre it exactly
+    // once it exists.
+    final estimate = (currentIndex * _estimatedLineHeight).clamp(
+      0.0,
+      _scrollController.position.maxScrollExtent,
     );
+    _scrollController.jumpTo(estimate);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final built = _lineKeys[currentIndex]?.currentContext;
+      if (built != null && mounted) {
+        Scrollable.ensureVisible(built, alignment: 0.5);
+      }
+    });
   }
 
   @override
@@ -84,99 +119,122 @@ class _TranscriptViewState extends ConsumerState<TranscriptView> {
           }
         });
 
-        return ListView.separated(
-          controller: _scrollController,
-          itemCount: sentences.length,
-          separatorBuilder: (_, _) => const SizedBox(height: 2),
-          padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-          itemBuilder: (context, index) {
-            final sentence = sentences[index];
-            final isCurrent =
-                position.inSeconds >= sentence.startSeconds &&
-                position.inSeconds < sentence.endSeconds;
+        // Half a screen of space below the last line lets even the final
+        // lines scroll up to the centre.
+        return LayoutBuilder(
+          builder: (context, constraints) =>
+              NotificationListener<UserScrollNotification>(
+                onNotification: (notification) {
+                  if (notification.direction != ScrollDirection.idle) {
+                    _userScrolledAt = DateTime.now();
+                    _lastScrolledIndex = null;
+                  }
+                  return false;
+                },
+                child: ListView.separated(
+                  controller: _scrollController,
+                  itemCount: sentences.length,
+                  separatorBuilder: (_, _) => const SizedBox(height: 2),
+                  padding: EdgeInsets.fromLTRB(
+                    12,
+                    8,
+                    12,
+                    constraints.maxHeight / 2,
+                  ),
+                  itemBuilder: (context, index) {
+                    final sentence = sentences[index];
+                    final isCurrent =
+                        position.inSeconds >= sentence.startSeconds &&
+                        position.inSeconds < sentence.endSeconds;
 
-            return GestureDetector(
-              onTap: controller != null
-                  ? () => controller.seekTo(
-                      seconds: sentence.startSeconds.toDouble(),
-                    )
-                  : null,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                decoration: BoxDecoration(
-                  color: isCurrent
-                      ? AppColors.primaryMain.withValues(alpha: 0.14)
-                      : Colors.transparent,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SizedBox(
-                      width: 42,
-                      child: Text(
-                        formatDuration(
-                          Duration(seconds: sentence.startSeconds),
+                    return GestureDetector(
+                      key: _keyFor(index),
+                      onTap: controller != null
+                          ? () => controller.seekTo(
+                              seconds: sentence.startSeconds.toDouble(),
+                            )
+                          : null,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 6,
                         ),
-                        style: TextStyle(
+                        decoration: BoxDecoration(
                           color: isCurrent
-                              ? AppColors.primaryMain
-                              : theme.colorScheme.onSurface.withValues(
-                                  alpha: 0.5,
+                              ? AppColors.primaryMain.withValues(alpha: 0.14)
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            SizedBox(
+                              width: 42,
+                              child: Text(
+                                formatDuration(
+                                  Duration(seconds: sentence.startSeconds),
                                 ),
-                          fontSize: 11,
-                          fontWeight: isCurrent
-                              ? FontWeight.w600
-                              : FontWeight.w400,
+                                style: TextStyle(
+                                  color: isCurrent
+                                      ? AppColors.primaryMain
+                                      : theme.colorScheme.onSurface.withValues(
+                                          alpha: 0.5,
+                                        ),
+                                  fontSize: 11,
+                                  fontWeight: isCurrent
+                                      ? FontWeight.w600
+                                      : FontWeight.w400,
+                                ),
+                              ),
+                            ),
+                            Expanded(
+                              child: TappableTranscriptText(
+                                tokens: tokenizer.tokenize(sentence.text),
+                                highlightColor: isCurrent
+                                    ? AppColors.primaryMain
+                                    : theme.colorScheme.onSurface,
+                                style: TextStyle(
+                                  color: isCurrent
+                                      ? AppColors.primaryMain
+                                      : theme.colorScheme.onSurface,
+                                  fontWeight: isCurrent
+                                      ? FontWeight.bold
+                                      : FontWeight.w400,
+                                  fontSize: 14,
+                                ),
+                                onTokenTap: (token) => _openLookupSheet(
+                                  context,
+                                  ref,
+                                  sentences: sentences,
+                                  sentence: sentence,
+                                  word: token,
+                                ),
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.bookmark_add_outlined),
+                              color: AppColors.primaryMain,
+                              iconSize: 18,
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(
+                                minWidth: 28,
+                                minHeight: 28,
+                              ),
+                              tooltip: 'Mine this sentence',
+                              onPressed: () => _openSaveSheet(
+                                context,
+                                ref,
+                                sentences: sentences,
+                                sentence: sentence,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    ),
-                    Expanded(
-                      child: TappableTranscriptText(
-                        tokens: tokenizer.tokenize(sentence.text),
-                        highlightColor: isCurrent
-                            ? AppColors.primaryMain
-                            : theme.colorScheme.onSurface,
-                        style: TextStyle(
-                          color: isCurrent
-                              ? AppColors.primaryMain
-                              : theme.colorScheme.onSurface,
-                          fontWeight: isCurrent
-                              ? FontWeight.bold
-                              : FontWeight.w400,
-                          fontSize: 14,
-                        ),
-                        onTokenTap: (token) => _openLookupSheet(
-                          context,
-                          ref,
-                          sentences: sentences,
-                          sentence: sentence,
-                          word: token,
-                        ),
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.bookmark_add_outlined),
-                      color: AppColors.primaryMain,
-                      iconSize: 18,
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(
-                        minWidth: 28,
-                        minHeight: 28,
-                      ),
-                      tooltip: 'Mine this sentence',
-                      onPressed: () => _openSaveSheet(
-                        context,
-                        ref,
-                        sentences: sentences,
-                        sentence: sentence,
-                      ),
-                    ),
-                  ],
+                    );
+                  },
                 ),
               ),
-            );
-          },
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),

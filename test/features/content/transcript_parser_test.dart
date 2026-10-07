@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ingrain/features/content/domain/transcript_sentence.dart';
 import 'package:ingrain/features/content/data/transcript_parser.dart';
 
 void main() {
@@ -188,5 +189,32 @@ Hello''';
         expect(result[0].text, 'Hello world');
       });
     });
+  });
+
+  test('toSrt round-trips timings and text', () {
+    const sentences = [
+      TranscriptSentence(
+        index: 0,
+        text: 'こんにちは',
+        startSeconds: 0,
+        endSeconds: 3,
+      ),
+      TranscriptSentence(
+        index: 1,
+        text: '元気ですか',
+        startSeconds: 3725,
+        endSeconds: 3730,
+      ),
+    ];
+
+    final parsed = TranscriptParser.parse(
+      TranscriptParser.toSrt(sentences),
+      durationSeconds: 0,
+    );
+
+    expect(parsed.map((s) => (s.text, s.startSeconds, s.endSeconds)), [
+      ('こんにちは', 0, 3),
+      ('元気ですか', 3725, 3730),
+    ]);
   });
 }

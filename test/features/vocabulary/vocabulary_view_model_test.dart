@@ -156,6 +156,22 @@ class FakeReviewRepository implements ReviewRepository {
   }
 
   @override
+  Future<void> saveCards(
+    List<ReviewCard> cards, {
+    void Function(int saved)? onProgress,
+  }) async {
+    for (final card in cards) {
+      await saveCard(card);
+    }
+    onProgress?.call(cards.length);
+  }
+
+  @override
+  Future<void> deleteCards(List<String> cardIds) async {
+    cards.removeWhere((card) => cardIds.contains(card.id));
+  }
+
+  @override
   Future<void> saveCard(ReviewCard card) async {}
 
   @override

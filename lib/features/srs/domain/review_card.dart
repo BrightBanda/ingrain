@@ -6,6 +6,20 @@ enum CardType { sentence, vocabulary, basic }
 
 enum Rating { again, hard, good, easy }
 
+/// Where a card is in Anki's life cycle.
+///
+/// New cards climb the learning steps (minutes apart) until they graduate to
+/// review (days apart). A failed review card drops into relearning steps and
+/// then returns to review with a shorter interval.
+enum CardState {
+  newCard,
+  learning,
+  review,
+  relearning;
+
+  bool get isLearning => this == learning || this == relearning;
+}
+
 class ReviewCard {
   final String id;
   final String uid;
@@ -21,6 +35,17 @@ class ReviewCard {
   final double easeFactor;
   final int reviewCount;
   final DateTime? lastReviewedAt;
+  final CardState state;
+
+  /// Index into the learning or relearning steps while [state] is one of
+  /// those; unused otherwise.
+  final int step;
+
+  /// How many times this card was forgotten after graduating.
+  final int lapses;
+
+  /// Suspended cards never come up for study (Anki's "suspend").
+  final bool suspended;
 
   const ReviewCard({
     required this.id,
@@ -37,9 +62,13 @@ class ReviewCard {
     this.easeFactor = 2.5,
     this.reviewCount = 0,
     this.lastReviewedAt,
+    this.state = CardState.newCard,
+    this.step = 0,
+    this.lapses = 0,
+    this.suspended = false,
   });
 
-  bool isDueAt(DateTime now) => !dueAt.isAfter(now);
+  bool isDueAt(DateTime now) => !suspended && !dueAt.isAfter(now);
 
   ReviewCard copyWith({
     String? id,
@@ -56,6 +85,10 @@ class ReviewCard {
     double? easeFactor,
     int? reviewCount,
     DateTime? Function()? lastReviewedAt,
+    CardState? state,
+    int? step,
+    int? lapses,
+    bool? suspended,
   }) {
     return ReviewCard(
       id: id ?? this.id,
@@ -74,6 +107,10 @@ class ReviewCard {
       lastReviewedAt: lastReviewedAt != null
           ? lastReviewedAt()
           : this.lastReviewedAt,
+      state: state ?? this.state,
+      step: step ?? this.step,
+      lapses: lapses ?? this.lapses,
+      suspended: suspended ?? this.suspended,
     );
   }
 }

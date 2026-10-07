@@ -1,5 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ingrain/core/storage/local_document_store.dart';
+import 'package:ingrain/features/srs/data/srs_settings_repository.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import '../../support/fake_auth_repository.dart';
+
 import 'package:ingrain/core/utils/clock.dart';
 import 'package:ingrain/features/immersion/presentation/viewmodel/immersion_session_view_model.dart';
 import 'package:ingrain/features/srs/domain/review_card.dart';
@@ -47,6 +53,22 @@ class FakeReviewRepository implements ReviewRepository {
     );
     cards.add(card);
     return card;
+  }
+
+  @override
+  Future<void> saveCards(
+    List<ReviewCard> cards, {
+    void Function(int saved)? onProgress,
+  }) async {
+    for (final card in cards) {
+      await saveCard(card);
+    }
+    onProgress?.call(cards.length);
+  }
+
+  @override
+  Future<void> deleteCards(List<String> cardIds) async {
+    cards.removeWhere((card) => cardIds.contains(card.id));
   }
 
   @override
@@ -133,14 +155,23 @@ void main() {
       }
     }
 
-    setUp(() {
+    setUp(() async {
       repository = FakeReviewRepository();
       clock = ManualClock(startTime);
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
 
       container = ProviderContainer(
         overrides: [
           reviewRepositoryProvider.overrideWithValue(repository),
           clockProvider.overrideWithValue(clock),
+          // Settings and daily counts live in the local store, as in the app.
+          srsSettingsRepositoryProvider.overrideWithValue(
+            SrsSettingsRepository(
+              LocalDocumentStore(prefs),
+              FakeAuthRepository(),
+            ),
+          ),
         ],
       );
     });
@@ -177,12 +208,17 @@ void main() {
         createdAt: startTime,
         dueAt: startTime,
       );
-      await repository.createCard(
+      // New cards have no due date (only the daily limit), so "not due yet"
+      // means a review card scheduled for later.
+      final later = await repository.createCard(
         cardType: CardType.sentence,
         sourceItemId: 'later',
         promptText: 'later',
         createdAt: startTime,
         dueAt: startTime.add(const Duration(days: 3)),
+      );
+      await repository.saveCard(
+        later.copyWith(state: CardState.review, intervalDays: 3),
       );
 
       await vm().startSession();
@@ -216,21 +252,32 @@ void main() {
       expect(state().answerShown, isFalse);
     });
 
-    test('submitAnswer with good schedules and records the review', () async {
+    test('good on a new card moves it to the next learning step', () async {
       await seedDueCards(1);
       await vm().startSession();
 
       await vm().submitAnswer(Rating.good);
 
-      expect(repository.cards.single.intervalDays, 1);
-      expect(repository.cards.single.repetitions, 1);
-      expect(
-        repository.cards.single.dueAt,
-        startTime.add(const Duration(days: 1)),
-      );
+      final card = repository.cards.single;
+      expect(card.state, CardState.learning);
+      expect(card.step, 1);
+      expect(card.repetitions, 1);
+      expect(card.dueAt, startTime.add(const Duration(minutes: 10)));
       expect(repository.history.single.rating, Rating.good);
-      expect(repository.history.single.intervalDaysAfter, 1);
+      expect(repository.history.single.intervalDaysAfter, 0);
       expect(repository.history.single.reviewedAt, startTime);
+    });
+
+    test('easy on a new card graduates it straight to review', () async {
+      await seedDueCards(1);
+      await vm().startSession();
+
+      await vm().submitAnswer(Rating.easy);
+
+      final card = repository.cards.single;
+      expect(card.state, CardState.review);
+      expect(card.intervalDays, 4);
+      expect(card.dueAt, startTime.add(const Duration(days: 4)));
     });
 
     test('submitAnswer advances to the next card', () async {
@@ -250,7 +297,7 @@ void main() {
       await seedDueCards(2);
       await vm().startSession();
 
-      await vm().submitAnswer(Rating.good);
+      await vm().submitAnswer(Rating.easy);
       await vm().submitAnswer(Rating.easy);
 
       expect(state().isComplete, isTrue);
@@ -260,45 +307,51 @@ void main() {
       expect(repository.history.length, 2);
     });
 
-    test('rescheduling an again card makes it due again later', () async {
+    test('a card still learning comes back in the same session', () async {
       await seedDueCards(1);
       await vm().startSession();
 
       await vm().submitAnswer(Rating.again);
 
       final card = repository.cards.single;
-      expect(card.intervalDays, 0);
-      expect(card.repetitions, 0);
-      expect(card.dueAt, startTime.add(const Duration(minutes: 10)));
+      expect(card.state, CardState.learning);
+      expect(card.step, 0);
+      expect(card.dueAt, startTime.add(const Duration(minutes: 1)));
+      expect(state().isComplete, isFalse);
+      expect(state().currentCard!.id, card.id);
+      expect(state().total, 2);
+    });
 
-      clock.advance(const Duration(minutes: 10));
-      await vm().refreshDue();
+    test('daily new card limit caps the queue', () async {
+      await seedDueCards(25);
 
-      expect(state().total, 1);
+      await vm().startSession();
+
+      expect(state().total, 20);
     });
 
     test('a reviewed card leaves the due queue until it comes back', () async {
       await seedDueCards(1);
       await vm().startSession();
-      await vm().submitAnswer(Rating.good);
+      await vm().submitAnswer(Rating.easy);
 
       await vm().refreshDue();
 
       expect(state().isEmpty, isTrue);
     });
 
-    test('previewInterval matches what the scheduler will apply', () async {
+    test('previewDelay matches what the scheduler will apply', () async {
       await seedDueCards(1);
       await vm().startSession();
 
-      expect(vm().previewInterval(Rating.again), 0);
-      expect(vm().previewInterval(Rating.hard), 1);
-      expect(vm().previewInterval(Rating.good), 1);
-      expect(vm().previewInterval(Rating.easy), 4);
+      expect(vm().previewDelay(Rating.again), const Duration(minutes: 1));
+      expect(vm().previewDelay(Rating.hard), const Duration(seconds: 330));
+      expect(vm().previewDelay(Rating.good), const Duration(minutes: 10));
+      expect(vm().previewDelay(Rating.easy), const Duration(days: 4));
     });
 
-    test('previewInterval is zero without a current card', () async {
-      expect(vm().previewInterval(Rating.good), 0);
+    test('previewDelay is zero without a current card', () async {
+      expect(vm().previewDelay(Rating.good), Duration.zero);
     });
 
     test('submitAnswer does nothing without a current card', () async {
@@ -310,15 +363,16 @@ void main() {
       expect(state().reviewedThisSession, 0);
     });
 
-    test('countDue reflects the repository at the current time', () async {
+    test('the due count follows today\'s queue', () async {
       await seedDueCards(2);
 
-      expect(await vm().countDue(), 2);
+      expect(await container.read(dueCountProvider.future), 2);
 
       await vm().startSession();
-      await vm().submitAnswer(Rating.good);
+      await vm().submitAnswer(Rating.easy);
+      container.invalidate(dueCountProvider);
 
-      expect(await vm().countDue(), 1);
+      expect(await container.read(dueCountProvider.future), 1);
     });
   });
 

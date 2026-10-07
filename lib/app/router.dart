@@ -13,10 +13,10 @@ import 'package:ingrain/features/immersion/presentation/view/immersion_home_view
 import 'package:ingrain/features/kana/presentation/kana_view.dart';
 import 'package:ingrain/features/profile/presentation/profile_view.dart';
 import 'package:ingrain/features/search/presentation/view/search_view.dart';
-import 'package:ingrain/features/sentence_mining/presentation/view/sentence_mining_view.dart';
 import 'package:ingrain/features/srs/presentation/view/deck_detail_view.dart';
 import 'package:ingrain/features/srs/presentation/view/flashcard_study_view.dart';
 import 'package:ingrain/features/srs/presentation/view/flashcards_view.dart';
+import 'package:ingrain/features/srs/presentation/view/srs_settings_view.dart';
 import 'package:ingrain/features/vocabulary/presentation/view/vocabulary_view.dart';
 import 'package:ingrain/shared/widgets/double_back_to_exit.dart';
 
@@ -85,6 +85,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         ),
       ),
       GoRoute(
+        path: '/flashcards/settings',
+        builder: (context, state) => const SrsSettingsView(),
+      ),
+      GoRoute(
         path: '/flashcards/deck/:id',
         builder: (context, state) =>
             DeckDetailView(deckId: state.pathParameters['id']!),
@@ -98,10 +102,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         ),
       ),
       GoRoute(path: '/search', builder: (context, state) => const SearchView()),
-      GoRoute(
-        path: '/sentences',
-        builder: (context, state) => const SentenceMiningView(),
-      ),
       GoRoute(
         path: '/vocabulary',
         builder: (context, state) => const VocabularyView(),

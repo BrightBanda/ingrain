@@ -67,7 +67,12 @@ class ProgressViewModel extends Notifier<ProgressUiState> {
       final sessions = await _immersionRepository.watchRecentSessions().first;
       final sentences = await _sentenceRepository.watchAll().first;
       final vocabulary = await _vocabularyRepository.watchAll().first;
-      final dueCards = await _reviewRepository.listDue(now: now);
+      // Today's study queue, within the daily limits, so a freshly imported
+      // deck of thousands of new cards does not read as thousands "due".
+      final dueCards = (await buildStudyQueue(
+        ref,
+        await ref.read(srsSettingsProvider.future),
+      )).cards;
       final reviewEvents = await _reviewRepository.listReviewHistory();
 
       final summary = _calculator.summarize(

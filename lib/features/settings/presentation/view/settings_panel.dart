@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:ingrain/app/theme/app_colors.dart';
 import 'package:ingrain/features/settings/domain/app_settings.dart';
 import 'package:ingrain/features/settings/presentation/viewmodel/settings_view_model.dart';
@@ -151,6 +152,25 @@ class SettingsPanel extends ConsumerWidget {
               ),
               onTap: () =>
                   _showGoalDialog(context, ref, settings.dailyGoalMinutes),
+            ),
+          ],
+        ),
+        _Section(
+          title: 'Flashcards',
+          color: goals,
+          children: [
+            ListTile(
+              leading: const IconBadge(
+                color: goals,
+                icon: Icons.tune,
+                size: 38,
+              ),
+              title: const Text('Flashcard settings'),
+              subtitle: const Text(
+                'Daily limits, learning steps, intervals and ease',
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => context.push('/flashcards/settings'),
             ),
           ],
         ),

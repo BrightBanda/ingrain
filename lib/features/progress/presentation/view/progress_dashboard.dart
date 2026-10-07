@@ -5,6 +5,7 @@ import 'package:ingrain/app/theme/app_colors.dart';
 import 'package:ingrain/core/utils/duration_format.dart';
 import 'package:ingrain/features/progress/domain/progress_summary.dart';
 import 'package:ingrain/features/progress/presentation/viewmodel/progress_view_model.dart';
+import 'package:ingrain/features/srs/domain/review_card.dart';
 import 'package:ingrain/shared/widgets/colorful.dart';
 
 /// The progress and analytics dashboard, shown on the Profile tab.
@@ -62,9 +63,10 @@ class ProgressDashboard extends ConsumerWidget {
           const SizedBox(height: 8),
           OutlinedButton.icon(
             style: _tintedButton(AppColors.primaryMain),
-            onPressed: () => context.push('/sentences'),
-            icon: const Icon(Icons.bookmark_border),
-            label: const Text('Browse mined sentences'),
+            onPressed: () =>
+                context.push('/flashcards/deck/$minedPhrasesDeckId'),
+            icon: const Icon(Icons.auto_awesome),
+            label: const Text('Browse mined phrases'),
           ),
           if (summary.isEmpty) ...[
             const SizedBox(height: 24),

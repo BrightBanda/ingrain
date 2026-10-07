@@ -40,11 +40,6 @@ class _ContentHistoryViewState extends ConsumerState<ContentHistoryView> {
               tooltip: 'Saved vocabulary',
               onPressed: () => context.push('/vocabulary'),
             ),
-            IconButton(
-              icon: const Icon(Icons.bookmark_border),
-              tooltip: 'Mined sentences',
-              onPressed: () => context.push('/sentences'),
-            ),
           ],
           IconButton(
             icon: const Icon(Icons.add),
