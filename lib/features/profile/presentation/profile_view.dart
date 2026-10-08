@@ -44,28 +44,63 @@ class ProfileView extends ConsumerWidget {
             const SizedBox(width: 4),
           ],
         ),
-        body: NestedScrollView(
-          headerSliverBuilder: (context, _) => [
-            const SliverToBoxAdapter(
-              child: Padding(
-                padding: EdgeInsets.fromLTRB(16, 4, 16, 8),
-                child: _ProfileHero(),
+        body: LayoutBuilder(
+          builder: (context, constraints) {
+            // Wide: the character card stays put in its own column while
+            // progress and settings scroll beside it.
+            if (constraints.maxWidth >= _sideBySideMinWidth) {
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(
+                    width: _heroColumnWidth,
+                    child: SingleChildScrollView(
+                      padding: EdgeInsets.fromLTRB(24, 4, 8, 24),
+                      child: _ProfileHero(),
+                    ),
+                  ),
+                  Expanded(
+                    child: Column(
+                      children: [
+                        _TabBarHeader._tabBar,
+                        const Expanded(
+                          child: TabBarView(
+                            children: [ProgressDashboard(), SettingsPanel()],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              );
+            }
+            return NestedScrollView(
+              headerSliverBuilder: (context, _) => [
+                const SliverToBoxAdapter(
+                  child: Padding(
+                    padding: EdgeInsets.fromLTRB(16, 4, 16, 8),
+                    child: _ProfileHero(),
+                  ),
+                ),
+                SliverPersistentHeader(
+                  pinned: true,
+                  delegate: _TabBarHeader(
+                    color: Theme.of(context).scaffoldBackgroundColor,
+                  ),
+                ),
+              ],
+              body: const TabBarView(
+                children: [ProgressDashboard(), SettingsPanel()],
               ),
-            ),
-            SliverPersistentHeader(
-              pinned: true,
-              delegate: _TabBarHeader(
-                color: Theme.of(context).scaffoldBackgroundColor,
-              ),
-            ),
-          ],
-          body: const TabBarView(
-            children: [ProgressDashboard(), SettingsPanel()],
-          ),
+            );
+          },
         ),
       ),
     );
   }
+
+  static const _sideBySideMinWidth = 900.0;
+  static const _heroColumnWidth = 400.0;
 
   Future<void> _signOut(BuildContext context, WidgetRef ref) async {
     final confirmed = await showDialog<bool>(

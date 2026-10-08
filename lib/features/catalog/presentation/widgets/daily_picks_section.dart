@@ -83,14 +83,32 @@ class DailyPicksSection extends ConsumerWidget {
           ),
         ),
         switch (picks) {
-          AsyncData(:final value) when value.videos.isNotEmpty => Column(
-            children: [
-              _PickHeroCard(video: value.videos.first),
-              for (final video in value.videos.skip(1)) ...[
-                const SizedBox(height: 10),
-                _PickRowCard(video: video),
-              ],
-            ],
+          AsyncData(:final value) when value.videos.isNotEmpty => LayoutBuilder(
+            builder: (context, constraints) {
+              // Wide: all of today's picks side by side, as equals.
+              if (constraints.maxWidth >= _sideBySideMinWidth) {
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    for (final (index, video) in value.videos.indexed) ...[
+                      if (index > 0) const SizedBox(width: 14),
+                      Expanded(
+                        child: _PickHeroCard(video: video, compact: true),
+                      ),
+                    ],
+                  ],
+                );
+              }
+              return Column(
+                children: [
+                  _PickHeroCard(video: value.videos.first),
+                  for (final video in value.videos.skip(1)) ...[
+                    const SizedBox(height: 10),
+                    _PickRowCard(video: video),
+                  ],
+                ],
+              );
+            },
           ),
           AsyncData() || AsyncError() => fallback,
           _ => const _PicksLoading(),
@@ -98,6 +116,9 @@ class DailyPicksSection extends ConsumerWidget {
       ],
     );
   }
+
+  /// From this width the picks sit in one row instead of a stack.
+  static const _sideBySideMinWidth = 640.0;
 
   static String _freshIn(DateTime validUntil) {
     final left = validUntil.difference(DateTime.now().toUtc());
@@ -145,7 +166,10 @@ class LevelShelf extends ConsumerWidget {
 class _PickHeroCard extends ConsumerWidget {
   final CatalogVideo video;
 
-  const _PickHeroCard({required this.video});
+  /// One of several in a row: a smaller play button and less text.
+  final bool compact;
+
+  const _PickHeroCard({required this.video, this.compact = false});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -172,7 +196,9 @@ class _PickHeroCard extends ConsumerWidget {
                       ),
                     ),
                   ),
-                  Center(child: _PlayButton(busy: opening, size: 56)),
+                  Center(
+                    child: _PlayButton(busy: opening, size: compact ? 44 : 56),
+                  ),
                   Positioned(
                     left: 12,
                     top: 12,
@@ -198,7 +224,7 @@ class _PickHeroCard extends ConsumerWidget {
                     overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.titleMedium,
                   ),
-                  if (video.description.isNotEmpty) ...[
+                  if (video.description.isNotEmpty && !compact) ...[
                     const SizedBox(height: 4),
                     Text(
                       video.description,

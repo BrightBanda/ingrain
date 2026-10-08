@@ -5,6 +5,7 @@ import 'package:ingrain/app/theme/app_colors.dart';
 import 'package:ingrain/features/kana/domain/kana_chart.dart';
 import 'package:ingrain/features/kana/domain/kana_knowledge.dart';
 import 'package:ingrain/features/kana/presentation/kana_progress_view_model.dart';
+import 'package:ingrain/shared/layout/window_size.dart';
 import 'package:ingrain/shared/widgets/colorful.dart';
 
 extension KanaKnowledgeStyle on KanaKnowledge {
@@ -27,8 +28,21 @@ extension KanaKnowledgeStyle on KanaKnowledge {
 class KanaView extends StatelessWidget {
   const KanaView({super.key});
 
+  /// From this width both scripts are shown at once, side by side.
+  static const _sideBySideMinWidth = 760.0;
+
   @override
   Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) =>
+          !WindowSize.of(context).isCompact &&
+              constraints.maxWidth >= _sideBySideMinWidth
+          ? const _SideBySideBoards()
+          : _buildTabs(),
+    );
+  }
+
+  Widget _buildTabs() {
     return DefaultTabController(
       length: KanaScript.values.length,
       child: Scaffold(
@@ -47,6 +61,41 @@ class KanaView extends StatelessWidget {
             _KanaBoard(script: KanaScript.katakana),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Wide windows: hiragana and katakana next to each other, so あ and ア can
+/// be compared at a glance.
+class _SideBySideBoards extends StatelessWidget {
+  const _SideBySideBoards();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    Widget column(String title, KanaScript script) => Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+            child: Text(title, style: theme.textTheme.titleMedium),
+          ),
+          Expanded(child: _KanaBoard(script: script)),
+        ],
+      ),
+    );
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('Kana')),
+      body: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          column('Hiragana  あ', KanaScript.hiragana),
+          VerticalDivider(width: 1, color: theme.colorScheme.outlineVariant),
+          column('Katakana  ア', KanaScript.katakana),
+        ],
       ),
     );
   }

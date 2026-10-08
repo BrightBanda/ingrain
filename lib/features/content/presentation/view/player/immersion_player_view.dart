@@ -62,6 +62,8 @@ class _ImmersionPlayerViewState extends ConsumerState<ImmersionPlayerView> {
   StreamSubscription<YoutubePlayerValue>? _playerStreamSubscription;
   // Saved up front: `ref` must not be used once the screen starts closing.
   late final PlayerControllerNotifier _controllerNotifier;
+  final _playerKey = GlobalKey();
+  final _transcriptKey = GlobalKey();
   bool _videoLoadStarted = false;
   bool _videoReady = false;
   bool _playerIsPlaying = false;
@@ -365,33 +367,103 @@ class _ImmersionPlayerViewState extends ConsumerState<ImmersionPlayerView> {
             ),
         ],
       ),
-      body: Column(
-        children: [
+      body: LayoutBuilder(
+        builder: (context, constraints) {
           // Its own layer: repaints elsewhere on the screen leave the video's
-          // platform view untouched.
-          RepaintBoundary(child: _buildPlayer(contentAsync)),
-          _SeekBar(
-            controller: _controller,
-            fallbackDuration: Duration(
-              seconds: contentAsync.asData?.value.durationSeconds ?? 0,
+          // platform view untouched. The key keeps it (and the transcript)
+          // the same widget when a resize switches layouts, so the video is
+          // moved rather than reloaded.
+          final player = RepaintBoundary(
+            key: _playerKey,
+            child: _buildPlayer(contentAsync),
+          );
+          final controls = <Widget>[
+            _SeekBar(
+              controller: _controller,
+              fallbackDuration: Duration(
+                seconds: contentAsync.asData?.value.durationSeconds ?? 0,
+              ),
             ),
-          ),
-          if (_playerError != null) _buildPlayerError(),
-          _buildPlaybackControls(),
-          _SessionControls(
-            contentId: widget.contentId,
-            title: contentAsync.whenOrNull(data: (c) => c.title),
-            onStop: _confirmStopSession,
-          ),
-          Expanded(
-            child: RepaintBoundary(
-              child: TranscriptView(contentId: widget.contentId),
+            if (_playerError != null) _buildPlayerError(),
+            _buildPlaybackControls(),
+            _SessionControls(
+              contentId: widget.contentId,
+              title: contentAsync.whenOrNull(data: (c) => c.title),
+              onStop: _confirmStopSession,
             ),
-          ),
-        ],
+          ];
+          final transcript = RepaintBoundary(
+            key: _transcriptKey,
+            child: TranscriptView(contentId: widget.contentId),
+          );
+
+          if (constraints.maxWidth < _sideBySideMinWidth) {
+            return Column(
+              children: [
+                player,
+                ...controls,
+                Expanded(child: transcript),
+              ],
+            );
+          }
+
+          // Wide: watch on the left, read along on the right. The video
+          // shrinks to fit the window's height rather than pushing the
+          // controls off screen.
+          final theme = Theme.of(context);
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
+                  child: Column(
+                    children: [
+                      Flexible(
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(16),
+                          child: player,
+                        ),
+                      ),
+                      ...controls,
+                    ],
+                  ),
+                ),
+              ),
+              Container(
+                width: _transcriptWidth(constraints.maxWidth),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surface,
+                  border: Border(
+                    left: BorderSide(color: theme.colorScheme.outlineVariant),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
+                      child: Text(
+                        'Transcript',
+                        style: theme.textTheme.titleMedium,
+                      ),
+                    ),
+                    Expanded(child: transcript),
+                  ],
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
+
+  /// From this width the transcript sits beside the video.
+  static const _sideBySideMinWidth = 960.0;
+
+  static double _transcriptWidth(double available) =>
+      (available * 0.36).clamp(360.0, 520.0);
 
   Widget _buildPlayer(AsyncValue<ContentItem> contentAsync) {
     return contentAsync.when(

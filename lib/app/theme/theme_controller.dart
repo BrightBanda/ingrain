@@ -33,12 +33,12 @@ class ThemeControllerNotifier extends Notifier<ThemeMode> {
     final current = ref.read(settingsViewModelProvider).settings;
     if (current == null) return;
     await ref.read(settingsViewModelProvider.notifier).setThemeMode(
-          switch (mode) {
-            ThemeMode.light => ThemeSetting.light,
-            ThemeMode.dark => ThemeSetting.dark,
-            ThemeMode.system => ThemeSetting.system,
-          },
-        );
+      switch (mode) {
+        ThemeMode.light => ThemeSetting.light,
+        ThemeMode.dark => ThemeSetting.dark,
+        ThemeMode.system => ThemeSetting.system,
+      },
+    );
   }
 }
 

@@ -4,6 +4,7 @@ import 'package:ingrain/features/onboarding/presentation/viewmodel/onboarding_vi
 import 'package:ingrain/features/profile/domain/avatar_character.dart';
 import 'package:ingrain/features/profile/presentation/widgets/learner_avatar.dart';
 import 'package:ingrain/features/profile/presentation/widgets/preference_pickers.dart';
+import 'package:ingrain/shared/layout/window_size.dart';
 import 'package:ingrain/shared/widgets/double_back_to_exit.dart';
 
 /// First-run questions, one per screen: why, level, interests, name, avatar.
@@ -45,95 +46,100 @@ class OnboardingFlowView extends ConsumerWidget {
 
     final screen = Scaffold(
       body: SafeArea(
-        child: Column(
-          children: [
-            _TopBar(draft: draft, onBack: viewModel.back),
-            Expanded(
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 260),
-                switchInCurve: Curves.easeOutCubic,
-                switchOutCurve: Curves.easeInCubic,
-                transitionBuilder: (child, animation) => FadeTransition(
-                  opacity: animation,
-                  child: SlideTransition(
-                    position: Tween(
-                      begin: const Offset(0.06, 0),
-                      end: Offset.zero,
-                    ).animate(animation),
-                    child: child,
-                  ),
-                ),
-                child: ListView(
-                  key: ValueKey(draft.step),
-                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-                  children: [
-                    _Prompt(
-                      character: draft.avatar ?? AvatarCharacter.fallback,
-                      title: title,
-                      subtitle: subtitle,
+        // A comfortable column on desktop; edge to edge on phones.
+        child: MaxWidth(
+          maxWidth: 640,
+          child: Column(
+            children: [
+              _TopBar(draft: draft, onBack: viewModel.back),
+              Expanded(
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 260),
+                  switchInCurve: Curves.easeOutCubic,
+                  switchOutCurve: Curves.easeInCubic,
+                  transitionBuilder: (child, animation) => FadeTransition(
+                    opacity: animation,
+                    child: SlideTransition(
+                      position: Tween(
+                        begin: const Offset(0.06, 0),
+                        end: Offset.zero,
+                      ).animate(animation),
+                      child: child,
                     ),
-                    const SizedBox(height: 20),
-                    switch (draft.step) {
-                      OnboardingStep.reasons => ReasonPicker(
-                        selected: draft.reasons,
-                        onToggle: viewModel.toggleReason,
-                      ),
-                      OnboardingStep.level => LevelPicker(
-                        selected: draft.level,
-                        unsure: draft.levelUnsure,
-                        onSelect: viewModel.selectLevel,
-                        onUnsure: viewModel.selectUnsure,
-                      ),
-                      OnboardingStep.interests => InterestPicker(
-                        selected: draft.interests,
-                        onToggle: viewModel.toggleInterest,
-                      ),
-                      OnboardingStep.name => _NameField(
-                        onSubmitted: viewModel.next,
-                      ),
-                      OnboardingStep.avatar => Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          AvatarShowcase(
-                            character: draft.avatar ?? AvatarCharacter.fallback,
-                            displayName: draft.displayName,
-                          ),
-                          const SizedBox(height: 20),
-                          AvatarPicker(
-                            selected: draft.avatar,
-                            onSelect: viewModel.chooseAvatar,
-                          ),
-                        ],
-                      ),
-                    },
-                  ],
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
-              child: FilledButton(
-                onPressed: !draft.canContinue || draft.isSaving
-                    ? null
-                    : draft.isLastStep
-                    ? viewModel.finish
-                    : viewModel.next,
-                style: FilledButton.styleFrom(
-                  minimumSize: const Size.fromHeight(54),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
                   ),
-                  textStyle: theme.textTheme.titleMedium,
+                  child: ListView(
+                    key: ValueKey(draft.step),
+                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+                    children: [
+                      _Prompt(
+                        character: draft.avatar ?? AvatarCharacter.fallback,
+                        title: title,
+                        subtitle: subtitle,
+                      ),
+                      const SizedBox(height: 20),
+                      switch (draft.step) {
+                        OnboardingStep.reasons => ReasonPicker(
+                          selected: draft.reasons,
+                          onToggle: viewModel.toggleReason,
+                        ),
+                        OnboardingStep.level => LevelPicker(
+                          selected: draft.level,
+                          unsure: draft.levelUnsure,
+                          onSelect: viewModel.selectLevel,
+                          onUnsure: viewModel.selectUnsure,
+                        ),
+                        OnboardingStep.interests => InterestPicker(
+                          selected: draft.interests,
+                          onToggle: viewModel.toggleInterest,
+                        ),
+                        OnboardingStep.name => _NameField(
+                          onSubmitted: viewModel.next,
+                        ),
+                        OnboardingStep.avatar => Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            AvatarShowcase(
+                              character:
+                                  draft.avatar ?? AvatarCharacter.fallback,
+                              displayName: draft.displayName,
+                            ),
+                            const SizedBox(height: 20),
+                            AvatarPicker(
+                              selected: draft.avatar,
+                              onSelect: viewModel.chooseAvatar,
+                            ),
+                          ],
+                        ),
+                      },
+                    ],
+                  ),
                 ),
-                child: draft.isSaving
-                    ? const SizedBox.square(
-                        dimension: 22,
-                        child: CircularProgressIndicator(strokeWidth: 2.4),
-                      )
-                    : Text(draft.isLastStep ? 'Start learning' : 'Continue'),
               ),
-            ),
-          ],
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+                child: FilledButton(
+                  onPressed: !draft.canContinue || draft.isSaving
+                      ? null
+                      : draft.isLastStep
+                      ? viewModel.finish
+                      : viewModel.next,
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size.fromHeight(54),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    textStyle: theme.textTheme.titleMedium,
+                  ),
+                  child: draft.isSaving
+                      ? const SizedBox.square(
+                          dimension: 22,
+                          child: CircularProgressIndicator(strokeWidth: 2.4),
+                        )
+                      : Text(draft.isLastStep ? 'Start learning' : 'Continue'),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

@@ -13,6 +13,7 @@ import 'package:ingrain/features/dialogue/presentation/viewmodel/dialogue_provid
 import 'package:ingrain/features/progress/domain/progress_summary.dart';
 import 'package:ingrain/features/profile/presentation/widgets/learner_avatar.dart';
 import 'package:ingrain/features/progress/presentation/viewmodel/progress_view_model.dart';
+import 'package:ingrain/shared/layout/window_size.dart';
 import 'package:ingrain/shared/widgets/colorful.dart';
 
 class ImmersionHomeView extends ConsumerWidget {
@@ -78,98 +79,157 @@ class ImmersionHomeView extends ConsumerWidget {
       DateTime.now(),
     );
 
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      name == null || name.isEmpty ? 'おかえり!' : 'おかえり, $name',
-                      style: theme.textTheme.headlineSmall,
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'Pick up where you left off, or try something new.',
-                      style: theme.textTheme.bodyMedium,
-                    ),
-                  ],
+    // Wide windows already show the avatar in the sidebar.
+    final showAvatar = WindowSize.of(context).isCompact;
+    final greeting = Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name == null || name.isEmpty ? 'おかえり!' : 'おかえり, $name',
+                  style: theme.textTheme.headlineSmall,
                 ),
-              ),
-              const SizedBox(width: 12),
-              GestureDetector(
-                onTap: () => context.go('/profile'),
-                child: const LearnerAvatar(size: 52, rounded: true),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
-        _HeroCard(
-          summary: summary,
-          continueItem: recents.firstOrNull,
-          dialogue: dialogue,
-        ),
-        const SizedBox(height: 12),
-        _Shortcuts(dueCount: summary?.dueCount),
-        DailyPicksSection(
-          // Offline with nothing cached: fall back to the learner's own library.
-          fallback: video == null
-              ? _PromptTile(
-                  color: AppColors.video,
-                  icon: Icons.smart_display_outlined,
-                  title: 'Add your first YouTube video',
-                  subtitle: 'Paste a link and the transcript comes with it',
-                  onTap: () => context.push(AddContentType.youtube.route),
-                )
-              : _VideoHeroCard(item: video),
-        ),
-        const LevelShelf(),
-        SectionHeader(
-          'Dialogue of the day',
-          onAction: () => context.go('/library'),
-        ),
-        dialogues.when(
-          data: (_) => dialogue == null
-              ? _PromptTile(
-                  color: AppColors.dialogue,
-                  icon: Icons.forum_outlined,
-                  title: 'Write your own dialogue',
-                  subtitle: 'Paste any Japanese text to read it here',
-                  onTap: () => context.push(AddContentType.dialogue.route),
-                )
-              : _DialogueCard(dialogue: dialogue),
-          loading: () => const _LoadingTile(color: AppColors.dialogue),
-          error: (_, _) => _PromptTile(
-            color: AppColors.dialogue,
-            icon: Icons.cloud_off_outlined,
-            title: 'Dialogues are unavailable',
-            subtitle: 'Tap to try again',
-            onTap: () =>
-                ref.read(dialogueListViewModelProvider.notifier).refresh(),
-          ),
-        ),
-        if (recents.isNotEmpty) ...[
-          SectionHeader('Recent', onAction: () => context.go('/library')),
-          SizedBox(
-            height: 150,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: recents.length,
-              separatorBuilder: (_, _) => const SizedBox(width: 12),
-              itemBuilder: (context, index) =>
-                  _RecentCard(item: recents[index]),
+                const SizedBox(height: 2),
+                Text(
+                  'Pick up where you left off, or try something new.',
+                  style: theme.textTheme.bodyMedium,
+                ),
+              ],
             ),
           ),
+          if (showAvatar) ...[
+            const SizedBox(width: 12),
+            GestureDetector(
+              onTap: () => context.go('/profile'),
+              child: const LearnerAvatar(size: 52, rounded: true),
+            ),
+          ],
         ],
+      ),
+    );
+    final hero = _HeroCard(
+      summary: summary,
+      continueItem: recents.firstOrNull,
+      dialogue: dialogue,
+    );
+    final shortcuts = _Shortcuts(dueCount: summary?.dueCount);
+    final picks = DailyPicksSection(
+      // Offline with nothing cached: fall back to the learner's own library.
+      fallback: video == null
+          ? _PromptTile(
+              color: AppColors.video,
+              icon: Icons.smart_display_outlined,
+              title: 'Add your first YouTube video',
+              subtitle: 'Paste a link and the transcript comes with it',
+              onTap: () => context.push(AddContentType.youtube.route),
+            )
+          : _VideoHeroCard(item: video),
+    );
+    final dialogueSection = <Widget>[
+      SectionHeader(
+        'Dialogue of the day',
+        onAction: () => context.go('/library'),
+      ),
+      dialogues.when(
+        data: (_) => dialogue == null
+            ? _PromptTile(
+                color: AppColors.dialogue,
+                icon: Icons.forum_outlined,
+                title: 'Write your own dialogue',
+                subtitle: 'Paste any Japanese text to read it here',
+                onTap: () => context.push(AddContentType.dialogue.route),
+              )
+            : _DialogueCard(dialogue: dialogue),
+        loading: () => const _LoadingTile(color: AppColors.dialogue),
+        error: (_, _) => _PromptTile(
+          color: AppColors.dialogue,
+          icon: Icons.cloud_off_outlined,
+          title: 'Dialogues are unavailable',
+          subtitle: 'Tap to try again',
+          onTap: () =>
+              ref.read(dialogueListViewModelProvider.notifier).refresh(),
+        ),
+      ),
+    ];
+    final recentSection = <Widget>[
+      if (recents.isNotEmpty) ...[
+        SectionHeader('Recent', onAction: () => context.go('/library')),
+        SizedBox(
+          height: 150,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: recents.length,
+            separatorBuilder: (_, _) => const SizedBox(width: 12),
+            itemBuilder: (context, index) => _RecentCard(item: recents[index]),
+          ),
+        ),
       ],
+    ];
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < _twoColumnMinWidth) {
+          return ListView(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
+            children: [
+              greeting,
+              const SizedBox(height: 16),
+              hero,
+              const SizedBox(height: 12),
+              shortcuts,
+              picks,
+              const LevelShelf(),
+              ...dialogueSection,
+              ...recentSection,
+            ],
+          );
+        }
+
+        // Wide: what to watch fills the main column; today's goal and the
+        // study shortcuts stay at hand in a side column.
+        return ListView(
+          padding: const EdgeInsets.fromLTRB(28, 12, 28, 40),
+          children: [
+            greeting,
+            const SizedBox(height: 8),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [picks, const LevelShelf(), ...recentSection],
+                  ),
+                ),
+                const SizedBox(width: 28),
+                SizedBox(
+                  width: _sideColumnWidth,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const SizedBox(height: 22),
+                      hero,
+                      const SizedBox(height: 12),
+                      shortcuts,
+                      ...dialogueSection,
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
+        );
+      },
     );
   }
+
+  /// Below this the page is one column, as on a phone.
+  static const _twoColumnMinWidth = 900.0;
+  static const _sideColumnWidth = 360.0;
 }
 
 /// Most recently opened first.

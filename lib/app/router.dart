@@ -1,6 +1,6 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:ingrain/app/main_shell.dart';
 import 'package:ingrain/features/auth/presentation/view/onboarding_view.dart';
 import 'package:ingrain/features/auth/presentation/viewmodel/auth_view_model.dart';
 import 'package:ingrain/features/content/presentation/view/add_content_type.dart';
@@ -19,7 +19,10 @@ import 'package:ingrain/features/srs/presentation/view/flashcard_study_view.dart
 import 'package:ingrain/features/srs/presentation/view/flashcards_view.dart';
 import 'package:ingrain/features/srs/presentation/view/srs_settings_view.dart';
 import 'package:ingrain/features/vocabulary/presentation/view/vocabulary_view.dart';
-import 'package:ingrain/shared/widgets/double_back_to_exit.dart';
+import 'package:ingrain/shared/layout/window_size.dart';
+
+export 'package:ingrain/app/main_shell.dart'
+    show LearnDestination, MainShellView;
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   // Only what the redirect needs: a new router is built whenever this changes,
@@ -83,50 +86,63 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/flashcards/study',
-        builder: (context, state) => FlashcardStudyView(
-          deckId: state.uri.queryParameters['deck'],
-          title: state.uri.queryParameters['title'],
+        builder: (context, state) => PageFrame(
+          child: FlashcardStudyView(
+            deckId: state.uri.queryParameters['deck'],
+            title: state.uri.queryParameters['title'],
+          ),
         ),
       ),
       GoRoute(
         path: '/flashcards/settings',
-        builder: (context, state) => const SrsSettingsView(),
+        builder: (context, state) => const PageFrame(child: SrsSettingsView()),
       ),
       GoRoute(
         path: '/flashcards/deck/:id',
-        builder: (context, state) =>
-            DeckDetailView(deckId: state.pathParameters['id']!),
+        builder: (context, state) => PageFrame(
+          maxWidth: 980,
+          child: DeckDetailView(deckId: state.pathParameters['id']!),
+        ),
       ),
       GoRoute(
         path: '/content/add',
-        builder: (context, state) => ContentAddView(
-          initialType: AddContentType.fromName(
-            state.uri.queryParameters['type'],
+        builder: (context, state) => PageFrame(
+          child: ContentAddView(
+            initialType: AddContentType.fromName(
+              state.uri.queryParameters['type'],
+            ),
           ),
         ),
       ),
-      GoRoute(path: '/search', builder: (context, state) => const SearchView()),
+      GoRoute(
+        path: '/search',
+        builder: (context, state) => const PageFrame(child: SearchView()),
+      ),
       GoRoute(
         path: '/profile/edit',
-        builder: (context, state) => const EditProfileView(),
+        builder: (context, state) => const PageFrame(child: EditProfileView()),
       ),
       GoRoute(
         path: '/vocabulary',
-        builder: (context, state) => const VocabularyView(),
+        builder: (context, state) =>
+            const PageFrame(maxWidth: 980, child: VocabularyView()),
       ),
       GoRoute(
         path: '/dialogues/:id',
-        builder: (context, state) =>
-            DialogueReaderView(dialogueId: state.pathParameters['id']!),
+        builder: (context, state) => PageFrame(
+          child: DialogueReaderView(dialogueId: state.pathParameters['id']!),
+        ),
       ),
       GoRoute(
         path: '/content/:id/transcript',
         builder: (context, state) {
           final extra = state.extra as Map<String, dynamic>?;
-          return TranscriptEditorView(
-            contentId: state.pathParameters['id']!,
-            initialTranscript: extra?['transcript'] as String?,
-            initialDuration: extra?['duration'] as int?,
+          return PageFrame(
+            child: TranscriptEditorView(
+              contentId: state.pathParameters['id']!,
+              initialTranscript: extra?['transcript'] as String?,
+              initialDuration: extra?['duration'] as int?,
+            ),
           );
         },
       ),
@@ -138,115 +154,3 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     ],
   );
 });
-
-/// The pages behind the Learn tab's drop-up menu.
-enum LearnDestination {
-  vocab('Vocab', Icons.translate, '/learn/vocab'),
-  kana('Kana', Icons.font_download_outlined, '/learn/kana');
-
-  const LearnDestination(this.label, this.icon, this.path);
-
-  final String label;
-  final IconData icon;
-  final String path;
-}
-
-class MainShellView extends StatelessWidget {
-  final Widget child;
-
-  const MainShellView({super.key, required this.child});
-
-  /// Tabs as (icon, label, location prefix). Learn has no page of its own: it
-  /// opens a menu of [LearnDestination]s.
-  static const _tabs = [
-    (Icons.play_circle_fill, 'Immerse', '/immerse'),
-    (Icons.video_library, 'Library', '/library'),
-    (Icons.style, 'Flashcards', '/flashcards'),
-    (Icons.school, 'Learn', '/learn'),
-    (Icons.person, 'Profile', '/profile'),
-  ];
-
-  static const _learnIndex = 3;
-
-  @override
-  Widget build(BuildContext context) {
-    return DoubleBackToExit(
-      child: Scaffold(
-        body: child,
-        bottomNavigationBar: Builder(
-          builder: (barContext) => NavigationBar(
-            selectedIndex: _currentIndex(context),
-            onDestinationSelected: (index) {
-              if (index == _learnIndex) {
-                _openLearnMenu(barContext);
-              } else {
-                context.go(_tabs[index].$3);
-              }
-            },
-            destinations: [
-              for (final (index, tab) in _tabs.indexed)
-                NavigationDestination(
-                  icon: Icon(tab.$1),
-                  label: tab.$2,
-                  tooltip: index == _learnIndex ? 'Learn: vocab or kana' : null,
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  int _currentIndex(BuildContext context) {
-    final location = GoRouterState.of(context).uri.path;
-    final index = _tabs.indexWhere((t) => location.startsWith(t.$3));
-    return index < 0 ? 0 : index;
-  }
-
-  /// A menu that opens upwards from the Learn tab.
-  Future<void> _openLearnMenu(BuildContext barContext) async {
-    final bar = barContext.findRenderObject()! as RenderBox;
-    final overlay =
-        Overlay.of(barContext).context.findRenderObject()! as RenderBox;
-    final barTopLeft = bar.localToGlobal(Offset.zero, ancestor: overlay);
-    final tabWidth = bar.size.width / _tabs.length;
-    final tabLeft = barTopLeft.dx + tabWidth * _learnIndex;
-
-    // Menus open downwards from `top`; start them one menu-height above the
-    // bar so they sit on top of it instead.
-    const itemHeight = kMinInteractiveDimension;
-    const menuHeight = itemHeight * 2 + 16;
-    final top = barTopLeft.dy - menuHeight - 8;
-
-    final destination = await showMenu<LearnDestination>(
-      context: barContext,
-      position: RelativeRect.fromLTRB(
-        tabLeft - 40,
-        top,
-        overlay.size.width - tabLeft - tabWidth,
-        overlay.size.height - barTopLeft.dy,
-      ),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      items: [
-        for (final destination in LearnDestination.values)
-          PopupMenuItem(
-            value: destination,
-            height: itemHeight,
-            child: Row(
-              children: [
-                Icon(
-                  destination.icon,
-                  color: Theme.of(barContext).colorScheme.primary,
-                ),
-                const SizedBox(width: 12),
-                Text(destination.label),
-              ],
-            ),
-          ),
-      ],
-    );
-    if (destination != null && barContext.mounted) {
-      barContext.go(destination.path);
-    }
-  }
-}

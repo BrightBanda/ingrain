@@ -78,7 +78,10 @@ class _OnboardingViewState extends ConsumerState<OnboardingView> {
         body: Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(24),
-            child: _buildSignInStep(theme, authState.error),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 440),
+              child: _buildSignInStep(theme, authState.error),
+            ),
           ),
         ),
       ),
