@@ -1,0 +1,71 @@
+# Render Blueprint for the ingrain web app.
+#
+# Deploy: Render dashboard → New → Blueprint → BrightBanda/ingrain.
+#
+# This deploys the Flutter web build as a static site. The API is a separate
+# service with its own Blueprint in its own repository
+# (BrightBanda/Ingrained_backend → Ingrained_backend/render.yaml); it is not
+# defined here, so syncing this Blueprint never creates a second API.
+#
+# After the first deploy, add the site's domain (e.g. ingrain-web.onrender.com)
+# in the Firebase console under Authentication → Settings → Authorized domains,
+# or Google sign-in is refused on it.
+services:
+  - type: web
+    runtime: static
+    name: ingrain-web
+    # Installs the pinned Flutter SDK, then builds (see the script).
+    buildCommand: bash tool/render_build_web.sh
+    staticPublishPath: build/web
+    # Rebuild only for changes that affect the web app.
+    buildFilter:
+      paths:
+        - lib/**
+        - web/**
+        - assets/**
+        - pubspec.yaml
+        - pubspec.lock
+        - tool/render_build_web.sh
+        - render.yaml
+    envVars:
+      # The API the app talks to, baked in at build time. Change it here (or in
+      # the dashboard) and redeploy if the API moves.
+      - key: API_BASE_URL
+        value: https://ingrain-api-y6ia.onrender.com
+      # Keep in step with the SDK used locally.
+      - key: FLUTTER_VERSION
+        value: "3.47.4"
+    routes:
+      # A single-page app: any path without a file of its own loads the app,
+      # which then routes itself. (Today's URLs use #/ and need no rewrite;
+      # this keeps deep links working if the app moves to path URLs.)
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    headers:
+      # Files whose names do not change between releases must be revalidated,
+      # or browsers keep running the previous build after a deploy.
+      - path: /index.html
+        name: Cache-Control
+        value: no-cache
+      - path: /flutter_bootstrap.js
+        name: Cache-Control
+        value: no-cache
+      - path: /flutter_service_worker.js
+        name: Cache-Control
+        value: no-cache
+      - path: /main.dart.js
+        name: Cache-Control
+        value: no-cache
+      - path: /version.json
+        name: Cache-Control
+        value: no-cache
+      - path: /manifest.json
+        name: Cache-Control
+        value: no-cache
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: Referrer-Policy
+        value: strict-origin-when-cross-origin

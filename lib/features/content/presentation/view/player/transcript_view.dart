@@ -11,10 +11,36 @@ import 'package:ingrain/features/sentence_mining/presentation/view/sentence_save
 import 'package:ingrain/features/sentence_mining/presentation/viewmodel/sentence_mining_view_model.dart';
 import 'package:ingrain/features/srs/presentation/viewmodel/review_view_model.dart';
 import 'package:ingrain/features/vocabulary/domain/dictionary_index.dart';
+import 'package:ingrain/features/vocabulary/domain/japanese_tokenizer.dart';
 import 'package:ingrain/features/vocabulary/presentation/view/vocabulary_lookup_sheet.dart';
 import 'package:ingrain/features/vocabulary/presentation/view/vocabulary_save_sheet.dart';
 import 'package:ingrain/features/vocabulary/presentation/viewmodel/vocabulary_view_model.dart';
 import 'package:ingrain/features/vocabulary/presentation/widgets/tappable_transcript_text.dart';
+
+/// The line playing at [second], or -1 between lines.
+int currentSentenceIndex(List<TranscriptSentence> sentences, int second) =>
+    sentences.indexWhere(
+      (sentence) =>
+          second >= sentence.startSeconds && second < sentence.endSeconds,
+    );
+
+/// The transcript line playing now, or -1.
+///
+/// The player reports its position several times a second. Deriving the line
+/// here means the transcript only rebuilds when playback moves to another line,
+/// not on every report: those rebuilds competed with the video for frames.
+final currentSentenceIndexProvider = Provider.family<int, String>((
+  ref,
+  contentId,
+) {
+  final sentences =
+      ref.watch(transcriptProvider(contentId)).value ??
+      const <TranscriptSentence>[];
+  final second = ref.watch(
+    playbackPositionProvider.select((position) => position.inSeconds),
+  );
+  return currentSentenceIndex(sentences, second);
+});
 
 class TranscriptView extends ConsumerStatefulWidget {
   final String? contentId;
@@ -46,19 +72,33 @@ class _TranscriptViewState extends ConsumerState<TranscriptView> {
 
   GlobalKey _keyFor(int index) => _lineKeys.putIfAbsent(index, GlobalKey.new);
 
+  /// Tokens per line, computed once per transcript rather than on every build.
+  final Map<int, List<String>> _tokens = {};
+  List<TranscriptSentence>? _tokensFrom;
+  JapaneseTokenizer? _tokensBy;
+
+  List<String> _tokensFor(
+    List<TranscriptSentence> sentences,
+    int index,
+    JapaneseTokenizer tokenizer,
+  ) {
+    if (!identical(sentences, _tokensFrom) ||
+        !identical(tokenizer, _tokensBy)) {
+      _tokens.clear();
+      _tokensFrom = sentences;
+      _tokensBy = tokenizer;
+    }
+    return _tokens.putIfAbsent(
+      index,
+      () => tokenizer.tokenize(sentences[index].text),
+    );
+  }
+
   /// Keeps the current line in the middle of the list: the highlight moves
   /// down until it reaches the centre, then the text scrolls under it.
-  void _maybeScrollToCurrent(
-    List<TranscriptSentence> sentences,
-    Duration position,
-  ) {
+  void _maybeScrollToCurrent(int currentIndex) {
     if (!mounted || !_scrollController.hasClients) return;
 
-    final currentIndex = sentences.indexWhere(
-      (sentence) =>
-          position.inSeconds >= sentence.startSeconds &&
-          position.inSeconds < sentence.endSeconds,
-    );
     if (currentIndex < 0 || currentIndex == _lastScrolledIndex) return;
 
     final scrolledAt = _userScrolledAt;
@@ -96,7 +136,6 @@ class _TranscriptViewState extends ConsumerState<TranscriptView> {
 
   @override
   Widget build(BuildContext context) {
-    final position = ref.watch(playbackPositionProvider);
     final controller = ref.watch(playerControllerProvider);
     final tokenizer = ref.watch(transcriptTokenizerProvider);
     final theme = Theme.of(context);
@@ -106,6 +145,9 @@ class _TranscriptViewState extends ConsumerState<TranscriptView> {
     }
 
     final transcriptAsync = ref.watch(transcriptProvider(widget.contentId!));
+    final currentIndex = ref.watch(
+      currentSentenceIndexProvider(widget.contentId!),
+    );
 
     return transcriptAsync.when(
       data: (sentences) {
@@ -115,7 +157,7 @@ class _TranscriptViewState extends ConsumerState<TranscriptView> {
 
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) {
-            _maybeScrollToCurrent(sentences, position);
+            _maybeScrollToCurrent(currentIndex);
           }
         });
 
@@ -143,9 +185,7 @@ class _TranscriptViewState extends ConsumerState<TranscriptView> {
                   ),
                   itemBuilder: (context, index) {
                     final sentence = sentences[index];
-                    final isCurrent =
-                        position.inSeconds >= sentence.startSeconds &&
-                        position.inSeconds < sentence.endSeconds;
+                    final isCurrent = index == currentIndex;
 
                     return GestureDetector(
                       key: _keyFor(index),
@@ -189,7 +229,7 @@ class _TranscriptViewState extends ConsumerState<TranscriptView> {
                             ),
                             Expanded(
                               child: TappableTranscriptText(
-                                tokens: tokenizer.tokenize(sentence.text),
+                                tokens: _tokensFor(sentences, index, tokenizer),
                                 highlightColor: isCurrent
                                     ? AppColors.primaryMain
                                     : theme.colorScheme.onSurface,

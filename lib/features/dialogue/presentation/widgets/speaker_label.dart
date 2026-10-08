@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:ingrain/app/theme/app_colors.dart';
 import 'package:ingrain/shared/widgets/colorful.dart';
 
-/// Speakers alternate between the two brand hues.
-final _speakerColors = AppColors.heroGradient;
+/// Speakers alternate between two clearly different hues.
+const _speakerColors = [AppColors.primaryMain, Color(0xFF7B5CFA)];
 
 /// A speaker's colour: by their position in [speakers] when known, so
 /// neighbouring speakers differ, otherwise by a stable hash.

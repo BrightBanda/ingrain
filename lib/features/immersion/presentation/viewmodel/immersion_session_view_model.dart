@@ -25,7 +25,7 @@ final tickIntervalProvider = Provider<Duration>(
   (ref) => const Duration(seconds: 1),
 );
 
-/// Playback position is reported on every player tick (~4x/second). Persisting
+/// Playback position is reported on every player tick (4x/second). Persisting
 /// it that often means decoding and rewriting the whole sessions document on
 /// the UI isolate, so writes are throttled while in-memory state stays exact.
 final positionPersistIntervalProvider = Provider<Duration>(
@@ -41,7 +41,17 @@ class ImmersionSessionViewModel extends Notifier<SessionUiState> {
   Timer? _timer;
   DateTime? _lastTickAt;
   DateTime? _lastPositionPersistedAt;
-  int _accumulatedSeconds = 0;
+
+  /// Time banked by earlier running stretches. Kept exact (not in whole
+  /// seconds) so frequent pause/resume, as when the player goes fullscreen,
+  /// does not drop a fraction of a second each time and drift the clock back.
+  Duration _accumulated = Duration.zero;
+
+  Duration get _elapsed =>
+      _accumulated +
+      (_lastTickAt == null
+          ? Duration.zero
+          : _clock.now.difference(_lastTickAt!));
 
   ImmersionSessionViewModel({required this.contentId});
 
@@ -68,21 +78,35 @@ class ImmersionSessionViewModel extends Notifier<SessionUiState> {
     return const SessionUiState();
   }
 
+  /// Set while a start is waiting on storage. The player can report
+  /// "playing" more than once in that window (the play button and the iframe
+  /// both do, and fullscreen pauses and plays again); without this each one
+  /// started a fresh session and reset the clock to zero.
+  bool _starting = false;
+
   Future<void> startSession({
     required String sourceTitle,
     ActivityType activityType = ActivityType.watching,
     int initialPosition = 0,
   }) async {
+    if (_starting || state.hasActiveSession) return;
+    _starting = true;
     final now = _clock.now;
-    final session = await _repository.startSession(
-      sourceId: contentId,
-      sourceTitle: sourceTitle,
-      activityType: activityType,
-      startedAt: now,
-    );
+    final ImmersionSession session;
+    try {
+      session = await _repository.startSession(
+        sourceId: contentId,
+        sourceTitle: sourceTitle,
+        activityType: activityType,
+        startedAt: now,
+      );
+    } finally {
+      _starting = false;
+    }
+    if (!ref.mounted) return;
 
     _lastTickAt = now;
-    _accumulatedSeconds = 0;
+    _accumulated = Duration.zero;
     _lastPositionPersistedAt = null;
 
     state = SessionUiState(
@@ -108,9 +132,7 @@ class ImmersionSessionViewModel extends Notifier<SessionUiState> {
       return;
     }
 
-    final now = _clock.now;
-    final elapsed =
-        _accumulatedSeconds + now.difference(_lastTickAt!).inSeconds;
+    final elapsed = _elapsed.inSeconds;
 
     state = state.copyWith(elapsedSeconds: elapsed);
     _repository.updateDuration(state.sessionId!, elapsed);
@@ -125,14 +147,17 @@ class ImmersionSessionViewModel extends Notifier<SessionUiState> {
   void _pauseSessionInternal() {
     if (_lastTickAt == null) return;
 
-    final now = _clock.now;
-    _accumulatedSeconds += now.difference(_lastTickAt!).inSeconds;
+    _accumulated = _elapsed;
     _lastTickAt = null;
 
-    state = state.copyWith(isRunning: false, isPaused: true);
+    state = state.copyWith(
+      isRunning: false,
+      isPaused: true,
+      elapsedSeconds: _accumulated.inSeconds,
+    );
 
     if (state.sessionId != null) {
-      _repository.updateDuration(state.sessionId!, _accumulatedSeconds);
+      _repository.updateDuration(state.sessionId!, _accumulated.inSeconds);
     }
   }
 
@@ -150,11 +175,7 @@ class ImmersionSessionViewModel extends Notifier<SessionUiState> {
 
   Future<void> stopSession() async {
     _timer?.cancel();
-    final stoppedElapsedSeconds =
-        _accumulatedSeconds +
-        (_lastTickAt != null
-            ? _clock.now.difference(_lastTickAt!).inSeconds
-            : 0);
+    final stoppedElapsedSeconds = _elapsed.inSeconds;
     final stoppedPositionSeconds = state.lastPositionSeconds;
 
     if (state.sessionId != null) {
@@ -172,12 +193,16 @@ class ImmersionSessionViewModel extends Notifier<SessionUiState> {
       elapsedSeconds: stoppedElapsedSeconds,
       lastPositionSeconds: stoppedPositionSeconds,
     );
-    _accumulatedSeconds = 0;
+    _accumulated = Duration.zero;
     _lastTickAt = null;
     _lastPositionPersistedAt = null;
   }
 
   Future<void> updatePosition(int seconds) async {
+    // The player reports several times a second, but the position is kept in
+    // whole seconds: only a new second is a new state. Replacing the state on
+    // every report rebuilt everything watching the session that often.
+    if (seconds == state.lastPositionSeconds) return;
     state = state.copyWith(lastPositionSeconds: seconds);
 
     final sessionId = state.sessionId;

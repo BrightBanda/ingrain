@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
@@ -28,7 +29,11 @@ class TappableTranscriptText extends StatefulWidget {
 }
 
 class _TappableTranscriptTextState extends State<TappableTranscriptText> {
+  /// One recognizer per token, kept across rebuilds. A transcript line rebuilds
+  /// whenever the current line moves, and churning a recognizer per word on
+  /// each of those frames competed with video playback for the UI thread.
   final List<TapGestureRecognizer> _recognizers = [];
+  List<String>? _recognizedTokens;
 
   @override
   void dispose() {
@@ -36,16 +41,35 @@ class _TappableTranscriptTextState extends State<TappableTranscriptText> {
     super.dispose();
   }
 
+  @override
+  void didUpdateWidget(TappableTranscriptText oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!listEquals(oldWidget.tokens, widget.tokens)) _disposeRecognizers();
+  }
+
   void _disposeRecognizers() {
     for (final recognizer in _recognizers) {
       recognizer.dispose();
     }
     _recognizers.clear();
+    _recognizedTokens = null;
+  }
+
+  /// Creates the recognizers once per token list. Each reads `widget` when
+  /// tapped, so a new callback from the parent is still honoured.
+  void _ensureRecognizers() {
+    if (_recognizedTokens != null) return;
+    for (final token in widget.tokens) {
+      _recognizers.add(
+        TapGestureRecognizer()..onTap = () => widget.onTokenTap(token),
+      );
+    }
+    _recognizedTokens = widget.tokens;
   }
 
   @override
   Widget build(BuildContext context) {
-    _disposeRecognizers();
+    _ensureRecognizers();
 
     final baseStyle = widget.style ?? DefaultTextStyle.of(context).style;
     final highlight = widget.highlightColor;
@@ -54,12 +78,12 @@ class _TappableTranscriptTextState extends State<TappableTranscriptText> {
       TextSpan(
         style: baseStyle,
         children: [
-          for (final token in widget.tokens)
+          for (final (index, token) in widget.tokens.indexed)
             if (_isTapTarget(token))
               TextSpan(
                 text: token,
                 style: highlight == null ? null : TextStyle(color: highlight),
-                recognizer: _recognizerFor(token),
+                recognizer: _recognizers[index],
               )
             else
               TextSpan(text: token),
@@ -71,12 +95,5 @@ class _TappableTranscriptTextState extends State<TappableTranscriptText> {
   bool _isTapTarget(String token) {
     // Punctuation, spaces and the like are not words, so they stay inert.
     return token.trim().isNotEmpty;
-  }
-
-  TapGestureRecognizer _recognizerFor(String token) {
-    final recognizer = TapGestureRecognizer()
-      ..onTap = () => widget.onTokenTap(token);
-    _recognizers.add(recognizer);
-    return recognizer;
   }
 }

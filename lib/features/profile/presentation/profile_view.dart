@@ -326,7 +326,7 @@ class _Badges extends StatelessWidget {
           Container(
             padding: const EdgeInsets.fromLTRB(10, 6, 12, 6),
             decoration: BoxDecoration(
-              color: level.color.withValues(alpha: 0.14),
+              color: theme.colorScheme.primary.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(999),
             ),
             child: Row(
@@ -337,7 +337,7 @@ class _Badges extends StatelessWidget {
                 Text(
                   '${level.code} · ${level.title}',
                   style: theme.textTheme.labelLarge?.copyWith(
-                    color: level.color,
+                    color: theme.colorScheme.primary,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -398,7 +398,6 @@ class _StatsRow extends ConsumerWidget {
         Expanded(
           child: _StatTile(
             icon: Icons.local_fire_department,
-            color: AppColors.streak,
             value: value(() => summary?.currentStreak),
             label: 'Day streak',
           ),
@@ -407,7 +406,6 @@ class _StatsRow extends ConsumerWidget {
         Expanded(
           child: _StatTile(
             icon: Icons.headphones,
-            color: AppColors.video,
             value: summary == null
                 ? '—'
                 : _hoursOrMinutes(summary.lifetimeSeconds),
@@ -418,7 +416,6 @@ class _StatsRow extends ConsumerWidget {
         Expanded(
           child: _StatTile(
             icon: Icons.translate,
-            color: AppColors.vocabulary,
             value: value(() => summary?.totalWords),
             label: 'Words',
           ),
@@ -427,7 +424,6 @@ class _StatsRow extends ConsumerWidget {
         Expanded(
           child: _StatTile(
             icon: Icons.font_download_outlined,
-            color: AppColors.fullyKnown,
             value: '$kanaKnown',
             label: 'Kana / $_kanaTotal',
           ),
@@ -443,13 +439,11 @@ String _hoursOrMinutes(int seconds) =>
 
 class _StatTile extends StatelessWidget {
   final IconData icon;
-  final Color color;
   final String value;
   final String label;
 
   const _StatTile({
     required this.icon,
-    required this.color,
     required this.value,
     required this.label,
   });
@@ -457,6 +451,7 @@ class _StatTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final color = theme.colorScheme.primary;
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
       decoration: BoxDecoration(
@@ -496,6 +491,7 @@ class _Goals extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final accent = theme.colorScheme.primary;
     Widget group(String title, List<Widget> pills) => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -511,18 +507,14 @@ class _Goals extends StatelessWidget {
         if (profile.learningReasons.isNotEmpty)
           group('Learning for', [
             for (final reason in profile.learningReasons)
-              Pill(label: reason.label, color: reason.color, icon: reason.icon),
+              Pill(label: reason.label, color: accent, icon: reason.icon),
           ]),
         if (profile.learningReasons.isNotEmpty && profile.interests.isNotEmpty)
           const SizedBox(height: 12),
         if (profile.interests.isNotEmpty)
           group('Interests', [
             for (final interest in profile.interests)
-              Pill(
-                label: interest.label,
-                color: interest.color,
-                icon: interest.icon,
-              ),
+              Pill(label: interest.label, color: accent, icon: interest.icon),
           ]),
       ],
     );

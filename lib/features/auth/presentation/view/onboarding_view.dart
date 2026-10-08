@@ -217,7 +217,13 @@ class _OnboardingViewState extends ConsumerState<OnboardingView> {
         ),
         borderRadius: BorderRadius.circular(28),
       ),
-      child: const Icon(Icons.spa, size: 48, color: Colors.white),
+      clipBehavior: Clip.antiAlias,
+      child: const Stack(
+        children: [
+          Positioned.fill(child: SeigaihaPattern(scale: 14)),
+          Center(child: Icon(Icons.spa, size: 48, color: Colors.white)),
+        ],
+      ),
     );
   }
 }

@@ -64,18 +64,18 @@ class ImmersionSessionDto {
     DateTime? pausedAt,
     bool isPaused = false,
   }) : map = {
-          'id': id,
-          'uid': uid,
-          'sourceId': sourceId,
-          if (sourceTitle != null) 'sourceTitle': sourceTitle,
-          'activityType': activityType.name,
-          'startedAt': startedAt.toIso8601String(),
-          if (endedAt != null) 'endedAt': endedAt.toIso8601String(),
-          'durationSeconds': durationSeconds,
-          'lastPositionSeconds': lastPositionSeconds,
-          if (pausedAt != null) 'pausedAt': pausedAt.toIso8601String(),
-          'isPaused': isPaused,
-        };
+         'id': id,
+         'uid': uid,
+         'sourceId': sourceId,
+         if (sourceTitle != null) 'sourceTitle': sourceTitle,
+         'activityType': activityType.name,
+         'startedAt': startedAt.toIso8601String(),
+         if (endedAt != null) 'endedAt': endedAt.toIso8601String(),
+         'durationSeconds': durationSeconds,
+         'lastPositionSeconds': lastPositionSeconds,
+         if (pausedAt != null) 'pausedAt': pausedAt.toIso8601String(),
+         'isPaused': isPaused,
+       };
 
   ImmersionSessionDto.fromMap(Map<String, dynamic> data) : map = Map.from(data);
 
@@ -93,8 +93,7 @@ class ImmersionSessionDto {
       startedAt: DateTime.parse(map['startedAt'] as String),
       endedAt: endedAtStr != null ? DateTime.parse(endedAtStr) : null,
       durationSeconds: (map['durationSeconds'] as num?)?.toInt() ?? 0,
-      lastPositionSeconds:
-          (map['lastPositionSeconds'] as num?)?.toInt() ?? 0,
+      lastPositionSeconds: (map['lastPositionSeconds'] as num?)?.toInt() ?? 0,
     );
   }
 }

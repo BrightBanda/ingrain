@@ -28,10 +28,12 @@ abstract final class AppColors {
   static const Color vocabulary = Color(0xFFF15BB5); // pink
   static const Color sentences = Color(0xFF00A6ED); // sky
 
-  /// The home hero card, blue into violet.
+  /// Hero panels: a light sky blue settling into the brand blue. Both stops
+  /// share one hue, so there is no drift towards violet; the seigaiha pattern
+  /// on top (`SeigaihaPattern`) gives heroes their texture.
   static const List<Color> heroGradient = [
+    Color(0xFF5094F7),
     Color(0xFF2F6FED),
-    Color(0xFF7B5CFA),
   ];
 
   // Backgrounds.

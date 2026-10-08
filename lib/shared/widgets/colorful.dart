@@ -92,7 +92,6 @@ class GradientPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: padding,
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: colors,
@@ -101,9 +100,92 @@ class GradientPanel extends StatelessWidget {
         ),
         borderRadius: BorderRadius.circular(radius),
       ),
-      child: child,
+      clipBehavior: Clip.antiAlias,
+      child: Stack(
+        children: [
+          const Positioned.fill(child: SeigaihaPattern()),
+          Padding(padding: padding, child: child),
+        ],
+      ),
     );
   }
+}
+
+/// 青海波 (seigaiha), the traditional wave pattern, drawn faintly in white
+/// over a coloured surface. It fades in from the left so text there stays
+/// clean, and is the app's signature texture on hero panels.
+class SeigaihaPattern extends StatelessWidget {
+  /// Radius of one wave scale, in logical pixels.
+  final double scale;
+
+  /// Strength of the lines at their most visible edge.
+  final double opacity;
+
+  const SeigaihaPattern({super.key, this.scale = 22, this.opacity = 0.2});
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: ShaderMask(
+        blendMode: BlendMode.dstIn,
+        shaderCallback: (bounds) => const LinearGradient(
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+          colors: [Color(0x00FFFFFF), Color(0x33FFFFFF), Color(0xFFFFFFFF)],
+          stops: [0.25, 0.55, 1],
+        ).createShader(bounds),
+        child: RepaintBoundary(
+          child: CustomPaint(
+            painter: _SeigaihaPainter(
+              color: Colors.white.withValues(alpha: opacity),
+              radius: scale,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SeigaihaPainter extends CustomPainter {
+  final Color color;
+  final double radius;
+
+  const _SeigaihaPainter({required this.color, required this.radius});
+
+  /// Concentric rings per scale.
+  static const _rings = 4;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final bounds = Offset.zero & size;
+    // Drawn in its own layer: each scale first clears the area it covers, so
+    // later (lower) rows overlap earlier ones like real fish scales.
+    canvas.saveLayer(bounds, Paint());
+    final clear = Paint()..blendMode = BlendMode.clear;
+    final line = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.3;
+
+    final rowStep = radius / 2;
+    var row = 0;
+    for (var y = -radius; y <= size.height + radius; y += rowStep, row++) {
+      final shift = row.isOdd ? radius : 0.0;
+      for (var x = -radius + shift; x <= size.width + radius; x += radius * 2) {
+        final centre = Offset(x, y);
+        canvas.drawCircle(centre, radius, clear);
+        for (var ring = 1; ring <= _rings; ring++) {
+          canvas.drawCircle(centre, radius * ring / _rings - 0.6, line);
+        }
+      }
+    }
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(_SeigaihaPainter oldDelegate) =>
+      oldDelegate.color != color || oldDelegate.radius != radius;
 }
 
 /// A small rounded label, tinted or [solid].

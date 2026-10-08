@@ -10,7 +10,6 @@ import 'package:ingrain/features/content/data/youtube_url_parser.dart';
 import 'package:ingrain/features/content/domain/content_item.dart';
 import 'package:ingrain/features/content/presentation/viewmodel/content_view_model.dart';
 import 'package:ingrain/features/content/presentation/view/player/transcript_view.dart';
-import 'package:ingrain/features/immersion/domain/session_state.dart';
 import 'package:ingrain/features/immersion/presentation/viewmodel/immersion_session_view_model.dart';
 
 final playbackPositionProvider =
@@ -83,6 +82,10 @@ class _ImmersionPlayerViewState extends ConsumerState<ImmersionPlayerView> {
         enableCaption: false,
         origin: 'https://www.youtube-nocookie.com',
         strictRelatedVideos: true,
+        // How often the iframe reports the position over the WebView bridge.
+        // The default 100ms sent ten messages a second, each one waking the
+        // UI thread; transcript lines and the seek bar only need a few.
+        videoStateUpdateInterval: 250,
       ),
       onWebResourceError: (error) {
         if (!mounted) return;
@@ -129,9 +132,19 @@ class _ImmersionPlayerViewState extends ConsumerState<ImmersionPlayerView> {
         immersionSessionViewModelProvider(widget.contentId),
       );
 
-      if (value.playerState == PlayerState.playing) {
-        _playerIsPlaying = true;
-        if (!sessionState.hasActiveSession && !sessionState.isPaused) {
+      final isPlaying = value.playerState == PlayerState.playing;
+      final stopped =
+          value.playerState == PlayerState.paused ||
+          value.playerState == PlayerState.ended;
+      if ((isPlaying && !_playerIsPlaying) || (stopped && _playerIsPlaying)) {
+        setState(() => _playerIsPlaying = isPlaying);
+      }
+
+      if (isPlaying) {
+        // Whatever started playback — our button, YouTube's own surface, or
+        // the player coming back from fullscreen (which pauses and then plays
+        // again) — the session clock follows it.
+        if (!sessionState.hasActiveSession) {
           final title =
               ref
                   .read(contentItemProvider(widget.contentId))
@@ -140,10 +153,10 @@ class _ImmersionPlayerViewState extends ConsumerState<ImmersionPlayerView> {
                   .title ??
               'Video';
           sessionVm.startSession(sourceTitle: title);
+        } else if (sessionState.isPaused) {
+          sessionVm.resumeSession();
         }
-      } else if (value.playerState == PlayerState.paused ||
-          value.playerState == PlayerState.ended) {
-        _playerIsPlaying = false;
+      } else if (stopped) {
         if (sessionState.isRunning && !sessionState.isPaused) {
           sessionVm.pauseSession();
         }
@@ -156,6 +169,14 @@ class _ImmersionPlayerViewState extends ConsumerState<ImmersionPlayerView> {
         _controllerNotifier.setController(_controller);
       }
     });
+
+    // Load the video once the content item is known, rather than checking on
+    // every build of this screen.
+    ref.listenManual(contentItemProvider(widget.contentId), (_, next) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _loadVideoIfNeeded(next);
+      });
+    }, fireImmediately: true);
   }
 
   String _mapYoutubeError(YoutubeError error) {
@@ -319,19 +340,13 @@ class _ImmersionPlayerViewState extends ConsumerState<ImmersionPlayerView> {
   @override
   Widget build(BuildContext context) {
     final contentAsync = ref.watch(contentItemProvider(widget.contentId));
-    final sessionState = ref.watch(
-      immersionSessionViewModelProvider(widget.contentId),
+    // Only what this screen draws itself. The session's ticking clock and
+    // position are watched by the small widgets that show them, so they no
+    // longer rebuild the player every second.
+    final sessionLive = ref.watch(
+      immersionSessionViewModelProvider(widget.contentId)
+          .select((session) => session.isRunning && !session.isPaused),
     );
-    final sessionVm = ref.read(
-      immersionSessionViewModelProvider(widget.contentId).notifier,
-    );
-
-    // Load video in post-frame callback to avoid modifying state during build
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        _loadVideoIfNeeded(contentAsync);
-      }
-    });
 
     return Scaffold(
       appBar: AppBar(
@@ -343,7 +358,7 @@ class _ImmersionPlayerViewState extends ConsumerState<ImmersionPlayerView> {
             onPressed: () =>
                 context.push('/content/${widget.contentId}/transcript'),
           ),
-          if (sessionState.isRunning && !sessionState.isPaused)
+          if (sessionLive)
             const Padding(
               padding: EdgeInsets.only(right: 12),
               child: Icon(Icons.circle, color: Colors.green, size: 12),
@@ -352,7 +367,9 @@ class _ImmersionPlayerViewState extends ConsumerState<ImmersionPlayerView> {
       ),
       body: Column(
         children: [
-          _buildPlayer(contentAsync),
+          // Its own layer: repaints elsewhere on the screen leave the video's
+          // platform view untouched.
+          RepaintBoundary(child: _buildPlayer(contentAsync)),
           _SeekBar(
             controller: _controller,
             fallbackDuration: Duration(
@@ -361,8 +378,16 @@ class _ImmersionPlayerViewState extends ConsumerState<ImmersionPlayerView> {
           ),
           if (_playerError != null) _buildPlayerError(),
           _buildPlaybackControls(),
-          _buildSessionControls(contentAsync, sessionState, sessionVm),
-          Expanded(child: TranscriptView(contentId: widget.contentId)),
+          _SessionControls(
+            contentId: widget.contentId,
+            title: contentAsync.whenOrNull(data: (c) => c.title),
+            onStop: _confirmStopSession,
+          ),
+          Expanded(
+            child: RepaintBoundary(
+              child: TranscriptView(contentId: widget.contentId),
+            ),
+          ),
         ],
       ),
     );
@@ -482,20 +507,35 @@ class _ImmersionPlayerViewState extends ConsumerState<ImmersionPlayerView> {
       ),
     );
   }
+}
 
-  Widget _buildSessionControls(
-    AsyncValue<ContentItem> contentAsync,
-    SessionUiState sessionState,
-    ImmersionSessionViewModel sessionVm,
-  ) {
-    final title = contentAsync.whenOrNull(data: (c) => c.title) ?? 'Loading...';
+/// The session clock, title and stop button. Watches the session on its own so
+/// the once-a-second clock tick redraws only this row.
+class _SessionControls extends ConsumerWidget {
+  final String contentId;
+  final String? title;
+  final VoidCallback onStop;
+
+  const _SessionControls({
+    required this.contentId,
+    required this.title,
+    required this.onStop,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final (elapsedSeconds, hasActiveSession) = ref.watch(
+      immersionSessionViewModelProvider(
+        contentId,
+      ).select((session) => (session.elapsedSeconds, session.hasActiveSession)),
+    );
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         children: [
           Text(
-            formatDuration(Duration(seconds: sessionState.elapsedSeconds)),
+            formatDuration(Duration(seconds: elapsedSeconds)),
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
@@ -503,11 +543,18 @@ class _ImmersionPlayerViewState extends ConsumerState<ImmersionPlayerView> {
             ),
           ),
           const SizedBox(width: 16),
-          Text(title, style: Theme.of(context).textTheme.bodyMedium),
-          const Spacer(),
-          if (sessionState.hasActiveSession)
+          Expanded(
+            child: Text(
+              title ?? 'Loading...',
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+          ),
+          const SizedBox(width: 8),
+          if (hasActiveSession)
             TextButton.icon(
-              onPressed: _confirmStopSession,
+              onPressed: onStop,
               icon: const Icon(Icons.stop),
               label: const Text('Stop session'),
             ),

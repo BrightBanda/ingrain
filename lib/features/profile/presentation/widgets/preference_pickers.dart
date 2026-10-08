@@ -13,7 +13,13 @@ import 'package:ingrain/features/profile/presentation/widgets/learner_preference
 class SelectableTile extends StatelessWidget {
   final IconData icon;
   final String label;
-  final Color color;
+
+  /// Defaults to the theme's primary colour, like every other selection.
+  final Color? color;
+
+  /// A soft hue for the icon while unselected, for a little variety in a long
+  /// list of options. Selection itself always uses [color].
+  final Color? iconColor;
   final bool selected;
   final VoidCallback onTap;
 
@@ -21,7 +27,8 @@ class SelectableTile extends StatelessWidget {
     super.key,
     required this.icon,
     required this.label,
-    required this.color,
+    this.color,
+    this.iconColor,
     required this.selected,
     required this.onTap,
   });
@@ -29,6 +36,8 @@ class SelectableTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final color = this.color ?? theme.colorScheme.primary;
+    final iconColor = this.iconColor ?? color;
     return Semantics(
       selected: selected,
       button: true,
@@ -58,24 +67,27 @@ class SelectableTile extends StatelessWidget {
                     width: 36,
                     height: 36,
                     decoration: BoxDecoration(
-                      color: selected ? color : color.withValues(alpha: 0.14),
+                      color: selected
+                          ? color
+                          : iconColor.withValues(alpha: 0.14),
                       borderRadius: BorderRadius.circular(11),
                     ),
                     child: Icon(
                       icon,
                       size: 20,
-                      color: selected ? Colors.white : color,
+                      color: selected ? Colors.white : iconColor,
                     ),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
+                    // No line limit: long options ("Understanding Japanese
+                    // media") wrap in full rather than being cut off.
                     child: Text(
                       label,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.labelLarge?.copyWith(height: 1.2),
                     ),
                   ),
+                  const SizedBox(width: 4),
                   AnimatedScale(
                     scale: selected ? 1 : 0,
                     duration: const Duration(milliseconds: 180),
@@ -92,7 +104,9 @@ class SelectableTile extends StatelessWidget {
   }
 }
 
-/// Lays [children] out two to a row (one on very narrow screens).
+/// Lays [children] out two to a row (one on very narrow screens). Tiles in a
+/// row share the taller one's height, so a label that wraps to more lines does
+/// not leave its neighbour looking short.
 class _TwoColumns extends StatelessWidget {
   final List<Widget> children;
 
@@ -104,12 +118,26 @@ class _TwoColumns extends StatelessWidget {
       builder: (context, constraints) {
         final columns = constraints.maxWidth < 320 ? 1 : 2;
         const gap = 10.0;
-        final width = (constraints.maxWidth - gap * (columns - 1)) / columns;
-        return Wrap(
-          spacing: gap,
-          runSpacing: gap,
+        return Column(
           children: [
-            for (final child in children) SizedBox(width: width, child: child),
+            for (var start = 0; start < children.length; start += columns) ...[
+              if (start > 0) const SizedBox(height: gap),
+              IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    for (var i = start; i < start + columns; i++) ...[
+                      if (i > start) const SizedBox(width: gap),
+                      Expanded(
+                        child: i < children.length
+                            ? children[i]
+                            : const SizedBox.shrink(),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
           ],
         );
       },
@@ -135,7 +163,7 @@ class ReasonPicker extends StatelessWidget {
           SelectableTile(
             icon: reason.icon,
             label: reason.label,
-            color: reason.color,
+            iconColor: reason.color,
             selected: selected.contains(reason),
             onTap: () => onToggle(reason),
           ),
@@ -162,7 +190,7 @@ class InterestPicker extends StatelessWidget {
           SelectableTile(
             icon: interest.icon,
             label: interest.label,
-            color: interest.color,
+            iconColor: interest.color,
             selected: selected.contains(interest),
             onTap: () => onToggle(interest),
           ),
@@ -186,7 +214,7 @@ class LevelBars extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fill = color ?? level.color;
+    final fill = color ?? Theme.of(context).colorScheme.primary;
     return Row(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.end,
@@ -251,14 +279,15 @@ class LevelPicker extends StatelessWidget {
                   child: Container(
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
-                      color: JlptLevel.fallback.color.withValues(alpha: 0.12),
+                      color: Theme.of(context).colorScheme.primary
+                          .withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: Row(
                       children: [
                         Icon(
                           Icons.lightbulb_outline,
-                          color: JlptLevel.fallback.color,
+                          color: Theme.of(context).colorScheme.primary,
                         ),
                         const SizedBox(width: 10),
                         Expanded(
@@ -295,7 +324,7 @@ class _LevelCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final color = level.color;
+    final color = theme.colorScheme.primary;
     return Semantics(
       selected: selected,
       button: true,

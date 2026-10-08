@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:ingrain/core/storage/firestore_document_store.dart';
 import 'package:ingrain/features/auth/domain/auth_repository.dart';
@@ -139,6 +140,10 @@ class FirebaseAuthRepository implements AuthSession {
   /// error worth showing.
   @override
   Future<bool> signInWithGoogle() async {
+    // google_sign_in's authenticate() is not supported in browsers; Firebase's
+    // own popup is the web equivalent and needs no client id.
+    if (kIsWeb) return _signInWithGooglePopup();
+
     await (_googleSignInReady ??= _googleSignIn.initialize(
       serverClientId: _serverClientId,
     ));
@@ -162,6 +167,23 @@ class FirebaseAuthRepository implements AuthSession {
       GoogleAuthProvider.credential(idToken: idToken),
     );
     return true;
+  }
+
+  /// Codes Firebase uses when the learner closes or replaces the popup.
+  static const _dismissedPopupCodes = {
+    'popup-closed-by-user',
+    'cancelled-popup-request',
+    'user-cancelled',
+  };
+
+  Future<bool> _signInWithGooglePopup() async {
+    try {
+      await _auth.signInWithPopup(GoogleAuthProvider());
+      return true;
+    } on FirebaseAuthException catch (error) {
+      if (_dismissedPopupCodes.contains(error.code)) return false;
+      rethrow;
+    }
   }
 
   @override

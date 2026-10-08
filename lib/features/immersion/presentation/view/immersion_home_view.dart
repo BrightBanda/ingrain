@@ -284,16 +284,7 @@ class _HeroCard extends StatelessWidget {
         : ('Add a video to get started', AddContentType.youtube.route);
 
     const onHero = Colors.white;
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: AppColors.heroGradient,
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(24),
-      ),
+    return GradientPanel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

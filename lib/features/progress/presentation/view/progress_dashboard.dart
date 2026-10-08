@@ -288,7 +288,7 @@ class _WeeklyChart extends StatelessWidget {
             Text('Last 7 days', style: theme.textTheme.titleMedium),
             const SizedBox(height: 16),
             SizedBox(
-              height: _maxBarHeight + 24,
+              height: _maxBarHeight + 34,
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
@@ -327,38 +327,68 @@ class _DayBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final fraction = maxSeconds <= 0 ? 0.0 : activity.seconds / maxSeconds;
-    final height = maxSeconds <= 0
-        ? 2.0
-        : (fraction * maxBarHeight).clamp(2.0, maxBarHeight);
     final isActive = activity.hasActivity;
 
+    final bar = BoxDecoration(
+      gradient: isActive
+          ? const LinearGradient(
+              begin: Alignment.bottomCenter,
+              end: Alignment.topCenter,
+              colors: AppColors.heroGradient,
+            )
+          : null,
+      color: isActive
+          ? null
+          : theme.colorScheme.primary.withValues(alpha: 0.10),
+      borderRadius: BorderRadius.circular(6),
+    );
+
     return Column(
-      mainAxisAlignment: MainAxisAlignment.end,
       children: [
-        if (activity.reviews > 0)
-          Text(
-            '${activity.reviews}',
-            style: const TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w600,
-              color: AppColors.primaryMain,
-            ),
-          ),
-        Container(
-          height: height,
-          margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-          decoration: BoxDecoration(
-            gradient: isActive
-                ? const LinearGradient(
-                    begin: Alignment.bottomCenter,
-                    end: Alignment.topCenter,
-                    colors: AppColors.heroGradient,
-                  )
-                : null,
-            color: isActive
-                ? null
-                : theme.colorScheme.primary.withValues(alpha: 0.10),
-            borderRadius: BorderRadius.circular(6),
+        // The bar takes whatever height is left after the labels, so a day
+        // with a review count, or larger system text, never pushes the
+        // weekday label out of the chart.
+        Expanded(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              const countHeight = 14.0;
+              const margin = 6.0;
+              final room = (constraints.maxHeight - countHeight - margin).clamp(
+                2.0,
+                maxBarHeight,
+              );
+              final height = maxSeconds <= 0
+                  ? 2.0
+                  : (fraction * room).clamp(2.0, room);
+              return Column(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  SizedBox(
+                    height: countHeight,
+                    child: activity.reviews > 0
+                        ? FittedBox(
+                            child: Text(
+                              '${activity.reviews}',
+                              style: const TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.primaryMain,
+                              ),
+                            ),
+                          )
+                        : null,
+                  ),
+                  Container(
+                    height: height,
+                    margin: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: margin / 2,
+                    ),
+                    decoration: bar,
+                  ),
+                ],
+              );
+            },
           ),
         ),
         const SizedBox(height: 4),

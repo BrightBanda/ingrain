@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ingrain/features/srs/domain/deck.dart';
-import 'package:ingrain/features/srs/presentation/view/anki_import_dialog.dart';
+import 'package:ingrain/features/srs/presentation/view/anki_import.dart';
 import 'package:ingrain/features/srs/presentation/viewmodel/review_view_model.dart';
 import 'package:ingrain/shared/widgets/colorful.dart';
 

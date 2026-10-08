@@ -110,11 +110,9 @@ class LocalImmersionRepository implements ImmersionRepository {
   Stream<List<ImmersionSession>> watchRecentSessions() async* {
     final uid = await _auth.ensureUid();
     final docs = await _store.listDocs(uid, collection);
-    final sessions = docs
-        .map((d) => _docToDomain(d))
-        .whereType<ImmersionSession>()
-        .toList()
-      ..sort((a, b) => b.startedAt.compareTo(a.startedAt));
+    final sessions =
+        docs.map((d) => _docToDomain(d)).whereType<ImmersionSession>().toList()
+          ..sort((a, b) => b.startedAt.compareTo(a.startedAt));
     yield sessions;
   }
 
@@ -138,8 +136,7 @@ class LocalImmersionRepository implements ImmersionRepository {
       startedAt: DateTime.parse(doc['startedAt'] as String),
       endedAt: endedAtStr != null ? DateTime.parse(endedAtStr) : null,
       durationSeconds: (doc['durationSeconds'] as num?)?.toInt() ?? 0,
-      lastPositionSeconds:
-          (doc['lastPositionSeconds'] as num?)?.toInt() ?? 0,
+      lastPositionSeconds: (doc['lastPositionSeconds'] as num?)?.toInt() ?? 0,
     );
   }
 }
