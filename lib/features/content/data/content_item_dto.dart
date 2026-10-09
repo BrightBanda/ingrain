@@ -15,18 +15,18 @@ class ContentItemDto {
     DateTime? lastOpenedAt,
     int? durationSeconds,
   }) : map = {
-          'id': id,
-          'sourceType': sourceType.name,
-          'sourceUrl': sourceUrl,
-          'title': title,
-          'channelTitle': channelTitle,
-          'thumbnailUrl': thumbnailUrl,
-          'lastPositionSeconds': lastPositionSeconds,
-          'totalImmersionSeconds': totalImmersionSeconds,
-          if (lastOpenedAt != null)
-            'lastOpenedAt': lastOpenedAt.toIso8601String(),
-          if (durationSeconds != null) 'durationSeconds': durationSeconds,
-        };
+         'id': id,
+         'sourceType': sourceType.name,
+         'sourceUrl': sourceUrl,
+         'title': title,
+         'channelTitle': channelTitle,
+         'thumbnailUrl': thumbnailUrl,
+         'lastPositionSeconds': lastPositionSeconds,
+         'totalImmersionSeconds': totalImmersionSeconds,
+         if (lastOpenedAt != null)
+           'lastOpenedAt': lastOpenedAt.toIso8601String(),
+         if (durationSeconds != null) 'durationSeconds': durationSeconds,
+       };
 
   ContentItemDto.fromMap(Map<String, dynamic> data) : map = Map.from(data);
 

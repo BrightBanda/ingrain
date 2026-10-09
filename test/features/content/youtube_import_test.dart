@@ -9,6 +9,7 @@ import '../../support/test_overrides.dart';
 
 class FakeFetcher extends YoutubeTranscriptFetcher {
   String? transcript = '00:00:01,000 --> 00:00:03,000\nこんにちは';
+  int durationSeconds = 95;
   int calls = 0;
 
   @override
@@ -17,7 +18,7 @@ class FakeFetcher extends YoutubeTranscriptFetcher {
     return YoutubeTranscriptResult(
       title: 'Fetched title',
       channelTitle: 'Fetched channel',
-      durationSeconds: 95,
+      durationSeconds: durationSeconds,
       transcriptText: transcript,
     );
   }
@@ -68,6 +69,21 @@ void main() {
     );
     expect(transcript.single.text, 'こんにちは');
   });
+
+  test(
+    'a fetcher that cannot tell the length keeps the searched one',
+    () async {
+      // The web fetcher (through the API) reports 0 for the length.
+      fetcher.durationSeconds = 0;
+
+      await viewModel().importYoutubeVideo(video);
+
+      final item = await container.read(
+        contentItemProvider(video.videoId).future,
+      );
+      expect(item.durationSeconds, 90);
+    },
+  );
 
   test('a second add returns the saved video without fetching again', () async {
     await viewModel().importYoutubeVideo(video);

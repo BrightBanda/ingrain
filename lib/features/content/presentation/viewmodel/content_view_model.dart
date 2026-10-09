@@ -1,9 +1,13 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ingrain/core/providers.dart';
 import 'package:ingrain/features/auth/presentation/viewmodel/auth_view_model.dart';
 import 'package:ingrain/features/content/data/local_content_repository.dart';
+import 'package:ingrain/features/content/data/remote_video_search_repository.dart';
+import 'package:ingrain/features/content/data/remote_youtube_transcript_fetcher.dart';
+import 'package:ingrain/features/content/data/transcript_parser.dart';
 import 'package:ingrain/features/content/data/youtube_transcript_fetcher.dart';
 import 'package:ingrain/features/content/data/youtube_url_parser.dart';
 import 'package:ingrain/features/content/data/youtube_video_search_repository.dart';
@@ -11,7 +15,6 @@ import 'package:ingrain/features/content/domain/content_item.dart';
 import 'package:ingrain/features/content/domain/content_repository.dart';
 import 'package:ingrain/features/content/domain/transcript_sentence.dart';
 import 'package:ingrain/features/content/domain/video_search.dart';
-import 'package:ingrain/features/content/data/transcript_parser.dart';
 
 final contentRepositoryProvider = Provider<ContentRepository>((ref) {
   final store = ref.watch(documentStoreProvider);
@@ -22,6 +25,11 @@ final contentRepositoryProvider = Provider<ContentRepository>((ref) {
 final youtubeTranscriptFetcherProvider = Provider<YoutubeTranscriptFetcher>((
   ref,
 ) {
+  // Browsers block calls to YouTube (CORS), so web fetches captions through
+  // the API; mobile asks YouTube directly.
+  if (kIsWeb) {
+    return RemoteYoutubeTranscriptFetcher(ref.watch(apiClientProvider));
+  }
   return YoutubeTranscriptFetcher();
 });
 
@@ -105,7 +113,12 @@ class ContentViewModel extends AsyncNotifier<List<ContentItem>> {
       fetched = null;
     }
 
-    final duration = fetched?.durationSeconds ?? video.duration?.inSeconds ?? 0;
+    // A fetcher that cannot tell the length (the web one) reports 0; keep the
+    // length search already gave us rather than overwrite it.
+    final fetchedSeconds = fetched?.durationSeconds ?? 0;
+    final duration = fetchedSeconds > 0
+        ? fetchedSeconds
+        : video.duration?.inSeconds ?? 0;
     final created = await _repository.create(
       sourceUrl: video.url,
       title: video.title,
@@ -182,6 +195,9 @@ class YoutubeImport {
 }
 
 final videoSearchRepositoryProvider = Provider<VideoSearchRepository>((ref) {
+  // Browsers block calls to youtube.com (CORS), so web searches through the
+  // API; mobile asks YouTube directly.
+  if (kIsWeb) return RemoteVideoSearchRepository(ref.watch(apiClientProvider));
   final repository = YoutubeVideoSearchRepository();
   ref.onDispose(repository.close);
   return repository;

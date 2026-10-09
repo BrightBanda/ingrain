@@ -76,7 +76,7 @@ class _ImmersionPlayerViewState extends ConsumerState<ImmersionPlayerView> {
     super.initState();
     _controllerNotifier = ref.read(playerControllerProvider.notifier);
     _controller = YoutubePlayerController(
-      params: const YoutubePlayerParams(
+      params: YoutubePlayerParams(
         showFullscreenButton: false,
         enableKeyboard: false,
         showControls: false,
@@ -89,6 +89,11 @@ class _ImmersionPlayerViewState extends ConsumerState<ImmersionPlayerView> {
         // The default 100ms sent ten messages a second, each one waking the
         // UI thread; transcript lines and the seek bar only need a few.
         videoStateUpdateInterval: 250,
+        // On web, YouTube's player reacts to the mouse even with its controls
+        // off: hovering fades in dark gradient bars over the video. The app
+        // has its own controls, so the player is made to ignore the pointer.
+        // Mobile keeps the default.
+        pointerEvents: kIsWeb ? PointerEvents.none : PointerEvents.initial,
       ),
       onWebResourceError: (error) {
         if (!mounted) return;
