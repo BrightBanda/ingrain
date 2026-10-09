@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ingrain/app/theme/app_colors.dart';
 import 'package:ingrain/features/auth/presentation/viewmodel/auth_view_model.dart';
 import 'package:ingrain/features/onboarding/presentation/view/onboarding_flow_view.dart';
+import 'package:ingrain/shared/widgets/app_logo.dart';
 import 'package:ingrain/shared/widgets/colorful.dart';
 import 'package:ingrain/shared/widgets/double_back_to_exit.dart';
 
@@ -95,7 +96,7 @@ class _OnboardingViewState extends ConsumerState<OnboardingView> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _badge(theme),
+          const AppLogo.tile(),
           const SizedBox(height: 24),
           Text('Sign in', style: theme.textTheme.headlineSmall),
           const SizedBox(height: 8),
@@ -203,28 +204,6 @@ class _OnboardingViewState extends ConsumerState<OnboardingView> {
                   : 'New here? Create an account',
             ),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _badge(ThemeData theme) {
-    return Container(
-      width: 96,
-      height: 96,
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: AppColors.heroGradient,
-        ),
-        borderRadius: BorderRadius.circular(28),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: const Stack(
-        children: [
-          Positioned.fill(child: SeigaihaPattern(scale: 14)),
-          Center(child: Icon(Icons.spa, size: 48, color: Colors.white)),
         ],
       ),
     );

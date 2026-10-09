@@ -53,3 +53,14 @@ It is permanent once the app is published.
    Without that file, release builds are signed with the debug key, which the Play
    Store rejects.
 5. **Build:** `flutter build appbundle --release`
+
+## App icon
+
+The icon's source is `branding/app_icon.svg`. `app_icon_monochrome.svg` is the version for
+Android themed icons, and `app_icon_mark.svg` is the simplified favicon. After editing,
+regenerate every Android, web and Play Store icon:
+
+    bash tool/generate_icons.sh
+
+This needs ImageMagick with librsvg and the Noto Sans CJK JP font, which draws 浸. The Play
+Store listing icon is written to `branding/store/play_store_icon_512.png`.

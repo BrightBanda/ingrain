@@ -1,0 +1,70 @@
+<!-- HitaruJP app icon. Edit this, then run tool/generate_icons.sh. -->
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="g" x1="0" y1="20" x2="0" y2="500" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#00C6FF"/>
+      <stop offset="0.55" stop-color="#2F86FF"/>
+      <stop offset="1" stop-color="#5A55FF"/>
+    </linearGradient>
+    <linearGradient id="brain" x1="0" y1="140" x2="0" y2="262" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#7EE7FF"/>
+      <stop offset="1" stop-color="#36A8FF"/>
+    </linearGradient>
+    <!-- Low-poly head, facing left, cut open across the top. -->
+    <polygon id="head" points="
+      120,268 344,250 368,298 362,352 334,396 292,418 290,500 184,500 184,442
+      150,430 124,416 114,400 120,391 112,384 116,372 96,360 114,330 106,316 110,292"/>
+  </defs>
+
+  <!-- Each icon on its own trail, swinging its own way into the brain. -->
+  <g fill="none" stroke="#2F86FF" stroke-linecap="round" opacity="0.26">
+    <path d="M 226 118 C 196 138 238 150 212 176" stroke-width="13"/>
+    <path d="M 340 106 C 336 146 282 126 268 168" stroke-width="12"/>
+    <path d="M 420 188 C 392 222 368 160 330 190" stroke-width="11"/>
+    <path d="M 448 300 C 418 320 404 246 360 240" stroke-width="10"/>
+  </g>
+  <!-- Head: faceted outline, smooth fill. -->
+  <use xlink:href="#head" fill="url(#g)"/>
+
+  <!-- The exposed brain, sitting in the open skull. -->
+  <g>
+    <path d="M 126 258
+             C 112 236 124 206 150 204 C 150 176 178 160 204 168
+             C 214 146 246 140 262 156 C 286 140 324 148 328 174
+             C 356 174 374 204 356 228 C 368 246 356 258 340 252 Z"
+          fill="url(#brain)"/>
+    <g fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" opacity="0.9">
+      <path d="M 170 214 C 180 196 204 196 210 214"/>
+      <path d="M 236 176 C 236 196 256 204 268 194"/>
+      <path d="M 300 212 C 314 200 336 206 336 222"/>
+      <path d="M 280 178 C 290 190 306 188 312 176"/>
+      <path d="M 220 236 C 236 224 260 232 262 246"/>
+      <path d="M 150 238 C 160 232 176 236 178 246"/>
+    </g>
+  </g>
+
+  <g fill="url(#g)">
+    <!-- Music note: furthest, smallest. -->
+    <ellipse cx="450" cy="304" rx="18" ry="14" transform="rotate(-22 450 304)"/>
+    <rect x="459" y="236" width="10" height="68" rx="5"/>
+    <path d="M 459 238 C 484 243 495 260 488 280 C 486 266 477 258 463 256 Z"/>
+    <!-- Speech bubble: dialogues. -->
+    <path d="M 410 116 h 60 a 18 18 0 0 1 18 18 v 28 a 18 18 0 0 1 -18 18 h -12
+             l -18 16 v -16 h -30 a 18 18 0 0 1 -18 -18 v -28 a 18 18 0 0 1 18 -18 Z"/>
+    <!-- Flashcards. -->
+    <rect x="322" y="16" width="64" height="82" rx="12" transform="rotate(16 354 57)" opacity="0.5"/>
+    <rect x="304" y="20" width="64" height="82" rx="12" transform="rotate(-4 336 61)"/>
+    <!-- Play button: nearest, about to drop into the brain. -->
+    <rect x="186" y="56" width="98" height="68" rx="22"/>
+  </g>
+  <g fill="#fff">
+    <circle cx="421" cy="148" r="5.5"/><circle cx="440" cy="148" r="5.5"/><circle cx="459" cy="148" r="5.5"/>
+    <rect x="320" y="50" width="34" height="7" rx="3.5" transform="rotate(-4 336 61)"/>
+    <rect x="320" y="66" width="24" height="7" rx="3.5" transform="rotate(-4 336 61)"/>
+    <path d="M 224 73 L 255 90 L 224 107 Z"/>
+  </g>
+
+  <!-- 浸, just under the cut. -->
+  <text x="238" y="372" font-family="Noto Sans CJK JP" font-weight="900"
+        font-size="104" text-anchor="middle" fill="#fff">浸</text>
+</svg>

@@ -1,0 +1,38 @@
+<!-- Simplified mark for favicons (16-32px): the head, brain and 浸 only. -->
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="54 132 350 374" width="512" height="512" preserveAspectRatio="xMidYMid meet">
+  <defs>
+    <linearGradient id="g" x1="0" y1="20" x2="0" y2="500" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#00C6FF"/>
+      <stop offset="0.55" stop-color="#2F86FF"/>
+      <stop offset="1" stop-color="#5A55FF"/>
+    </linearGradient>
+    <linearGradient id="brain" x1="0" y1="140" x2="0" y2="262" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#7EE7FF"/>
+      <stop offset="1" stop-color="#36A8FF"/>
+    </linearGradient>
+    <!-- Low-poly head, facing left, cut open across the top. -->
+    <polygon id="head" points="
+      120,268 344,250 368,298 362,352 334,396 292,418 290,500 184,500 184,442
+      150,430 124,416 114,400 120,391 112,384 116,372 96,360 114,330 106,316 110,292"/>
+  </defs>
+  <use xlink:href="#head" fill="url(#g)"/>
+  <!-- The exposed brain, sitting in the open skull. -->
+  <g>
+    <path d="M 126 258
+             C 112 236 124 206 150 204 C 150 176 178 160 204 168
+             C 214 146 246 140 262 156 C 286 140 324 148 328 174
+             C 356 174 374 204 356 228 C 368 246 356 258 340 252 Z"
+          fill="url(#brain)"/>
+    <g fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" opacity="0.9">
+      <path d="M 170 214 C 180 196 204 196 210 214"/>
+      <path d="M 236 176 C 236 196 256 204 268 194"/>
+      <path d="M 300 212 C 314 200 336 206 336 222"/>
+      <path d="M 280 178 C 290 190 306 188 312 176"/>
+      <path d="M 220 236 C 236 224 260 232 262 246"/>
+      <path d="M 150 238 C 160 232 176 236 178 246"/>
+    </g>
+  </g>
+
+  <text x="238" y="372" font-family="Noto Sans CJK JP" font-weight="900"
+        font-size="104" text-anchor="middle" fill="#fff">浸</text>
+</svg>

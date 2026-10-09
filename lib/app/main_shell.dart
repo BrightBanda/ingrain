@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:ingrain/app/theme/app_colors.dart';
 import 'package:ingrain/features/auth/presentation/viewmodel/auth_view_model.dart';
 import 'package:ingrain/features/profile/presentation/widgets/learner_avatar.dart';
 import 'package:ingrain/shared/layout/window_size.dart';
+import 'package:ingrain/shared/widgets/app_logo.dart';
 import 'package:ingrain/shared/widgets/colorful.dart';
 import 'package:ingrain/shared/widgets/double_back_to_exit.dart';
 
@@ -210,38 +210,6 @@ class MainShellView extends StatelessWidget {
   }
 }
 
-/// The app mark: the sprout on the hero blue, with the wave texture.
-class _LogoMark extends StatelessWidget {
-  final double size;
-
-  const _LogoMark({this.size = 40});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: AppColors.heroGradient,
-        ),
-        borderRadius: BorderRadius.circular(size * 0.3),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Stack(
-        children: [
-          const Positioned.fill(child: SeigaihaPattern(scale: 9)),
-          Center(
-            child: Icon(Icons.spa, color: Colors.white, size: size * 0.55),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 /// Tablets and small windows: icons with labels down the side.
 class _Rail extends StatelessWidget {
   final List<_Destination> destinations;
@@ -266,7 +234,7 @@ class _Rail extends StatelessWidget {
         indicatorColor: theme.colorScheme.primary.withValues(alpha: 0.14),
         leading: const Padding(
           padding: EdgeInsets.only(top: 8, bottom: 16),
-          child: _LogoMark(size: 44),
+          child: AppLogo.mark(size: 48),
         ),
         trailing: Expanded(
           child: Align(
@@ -332,7 +300,7 @@ class _Sidebar extends ConsumerWidget {
             children: [
               Row(
                 children: [
-                  const _LogoMark(),
+                  const AppLogo.mark(size: 44),
                   const SizedBox(width: 12),
                   // Shrinks rather than overflowing at large text sizes.
                   Flexible(
