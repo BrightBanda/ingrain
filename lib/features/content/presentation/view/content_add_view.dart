@@ -7,6 +7,7 @@ import 'package:ingrain/features/dialogue/data/user_dialogue_repository.dart';
 import 'package:ingrain/features/dialogue/domain/dialogue_text_parser.dart';
 import 'package:ingrain/features/dialogue/presentation/viewmodel/dialogue_providers.dart';
 import 'package:ingrain/features/vocabulary/presentation/viewmodel/vocabulary_view_model.dart';
+import 'package:ingrain/shared/widgets/web_transcript_notice.dart';
 
 class ContentAddView extends ConsumerStatefulWidget {
   final AddContentType initialType;
@@ -126,6 +127,10 @@ class _ContentAddViewState extends ConsumerState<ContentAddView> {
                         }),
                 ),
                 const SizedBox(height: 16),
+                if (!isDialogue && WebTranscriptNotice.applies) ...[
+                  const WebTranscriptBanner(),
+                  const SizedBox(height: 16),
+                ],
                 if (!isDialogue)
                   TextFormField(
                     controller: _urlController,

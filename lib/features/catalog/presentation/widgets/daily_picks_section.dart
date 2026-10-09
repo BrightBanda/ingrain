@@ -7,6 +7,7 @@ import 'package:ingrain/features/catalog/domain/catalog_video.dart';
 import 'package:ingrain/features/catalog/presentation/viewmodel/catalog_providers.dart';
 import 'package:ingrain/features/profile/presentation/widgets/learner_preference_style.dart';
 import 'package:ingrain/shared/widgets/colorful.dart';
+import 'package:ingrain/shared/widgets/web_transcript_notice.dart';
 
 /// Opens [video] in the player, telling the learner what is going on.
 Future<void> openCatalogVideo(
@@ -21,9 +22,12 @@ Future<void> openCatalogVideo(
     router.push('/content/${opened.contentId}');
     if (!opened.hasTranscript) {
       messenger.showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text(
-            'No Japanese subtitles on this one. Enjoy it as listening practice.',
+            WebTranscriptNotice.applies
+                ? WebTranscriptNotice.missingTranscript
+                : 'No Japanese subtitles on this one. Enjoy it as listening '
+                      'practice.',
           ),
         ),
       );

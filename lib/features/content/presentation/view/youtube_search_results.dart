@@ -5,6 +5,7 @@ import 'package:ingrain/core/utils/duration_format.dart';
 import 'package:ingrain/features/content/domain/video_search.dart';
 import 'package:ingrain/features/content/presentation/viewmodel/content_view_model.dart';
 import 'package:ingrain/shared/widgets/colorful.dart';
+import 'package:ingrain/shared/widgets/web_transcript_notice.dart';
 
 enum _ImportState { idle, adding, added }
 
@@ -45,9 +46,11 @@ class _YoutubeSearchResultsState extends ConsumerState<YoutubeSearchResults> {
       if (!result.hasTranscript) {
         messenger.showSnackBar(
           SnackBar(
-            content: const Text(
-              'No Japanese subtitles on this video. Add a transcript to read '
-              'along.',
+            content: Text(
+              WebTranscriptNotice.applies
+                  ? WebTranscriptNotice.missingTranscript
+                  : 'No Japanese subtitles on this video. Add a transcript to '
+                        'read along.',
             ),
             action: SnackBarAction(
               label: 'Add',
