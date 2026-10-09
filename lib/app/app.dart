@@ -18,7 +18,7 @@ class IngrApp extends ConsumerWidget {
     ref.watch(activityTrackerProvider);
 
     return MaterialApp.router(
-      title: 'ingrain',
+      title: 'HitaruJP',
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
       themeMode: themeMode,

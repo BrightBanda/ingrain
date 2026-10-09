@@ -73,7 +73,7 @@ class ApiClient {
       throw ApiException(
         AppError(
           type: AppErrorType.network,
-          message: 'The ingrain server took too long to answer.',
+          message: 'The HitaruJP server took too long to answer.',
           exception: error,
         ),
       );
@@ -81,7 +81,7 @@ class ApiClient {
       throw ApiException(
         AppError(
           type: AppErrorType.network,
-          message: 'Could not reach the ingrain server.',
+          message: 'Could not reach the HitaruJP server.',
           exception: error,
         ),
       );

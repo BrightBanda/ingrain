@@ -58,7 +58,7 @@ class RemoteAiExplanationRepository implements AiExplanationRepository {
       throw AiExplanationException(
         AppError(
           type: AppErrorType.network,
-          message: 'Could not reach the ingrain server.',
+          message: 'Could not reach the HitaruJP server.',
           exception: error,
         ),
       );

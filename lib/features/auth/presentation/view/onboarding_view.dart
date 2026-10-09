@@ -73,7 +73,7 @@ class _OnboardingViewState extends ConsumerState<OnboardingView> {
       child: Scaffold(
         appBar: AppBar(
           automaticallyImplyLeading: false,
-          title: const Text('Welcome to ingrain'),
+          title: const Text('Welcome to HitaruJP'),
         ),
         body: Center(
           child: SingleChildScrollView(

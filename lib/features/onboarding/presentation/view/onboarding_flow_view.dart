@@ -29,7 +29,7 @@ class OnboardingFlowView extends ConsumerWidget {
     ),
     OnboardingStep.name: (
       'What should we call you?',
-      'This is the name ingrain shows — never your email.',
+      'This is the name HitaruJP shows — never your email.',
     ),
     OnboardingStep.avatar: (
       'Pick your character!',

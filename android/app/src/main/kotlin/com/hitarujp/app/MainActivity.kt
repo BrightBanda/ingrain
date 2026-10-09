@@ -1,4 +1,4 @@
-package com.example.ingrain
+package com.hitarujp.app
 
 import io.flutter.embedding.android.FlutterActivity
 

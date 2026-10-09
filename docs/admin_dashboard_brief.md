@@ -1,6 +1,6 @@
-# ingrain Admin Dashboard — Build Brief
+# HitaruJP Admin Dashboard — Build Brief
 
-You are building the **ingrain admin dashboard**: a Flutter app, for **web (desktop browsers)** and **mobile (Android/iOS)**. Administrators use it to manage the video catalogue, pin daily recommendations, look at usage and AI-cost statistics, and change learners' subscription tiers.
+You are building the **HitaruJP admin dashboard**: a Flutter app, for **web (desktop browsers)** and **mobile (Android/iOS)**. Administrators use it to manage the video catalogue, pin daily recommendations, look at usage and AI-cost statistics, and change learners' subscription tiers.
 
 The backend API it talks to **already exists and is tested**. Your job is the client. Read this whole brief before writing code. Section 13 lists the acceptance criteria.
 
@@ -8,7 +8,7 @@ The backend API it talks to **already exists and is tested**. Your job is the cl
 
 ## 1. Context: what already exists
 
-ingrain is a Japanese immersion app. A learner signs in with Firebase. During onboarding they choose a JLPT level (N5 easiest, N1 hardest), their interests, and a character avatar. Each day the app shows them 3 recommended YouTube videos, picked by the backend.
+HitaruJP is a Japanese immersion app. A learner signs in with Firebase. During onboarding they choose a JLPT level (N5 easiest, N1 hardest), their interests, and a character avatar. Each day the app shows them 3 recommended YouTube videos, picked by the backend.
 
 | Piece | Where | Notes |
 |---|---|---|
@@ -357,13 +357,13 @@ Every data screen has four states: **loading** (skeletons shaped like the conten
 
 ### 10.1 Sign in and Not authorized
 
-- A centred card, max width 420. Logo mark: the app's gradient badge with a sprout icon (see `_badge` in the root `lib/features/auth/presentation/view/onboarding_view.dart`). Title: "ingrain admin".
+- A centred card, max width 420. Logo mark: the app's gradient badge with a sprout icon (see `_badge` in the root `lib/features/auth/presentation/view/onboarding_view.dart`). Title: "HitaruJP admin".
 - Google button first, then a divider, then email + password, then Sign in. Show inline errors under the fields. No sign-up link.
 - Not authorized: a lock icon, "This account isn't an admin", the email, the uid in a monospace selectable chip with a copy button, a one-line explanation of `ADMIN_UIDS`, and Sign out.
 
 ### 10.2 Overview (`/`)
 
-Purpose: answer "how is ingrain doing right now?" in five seconds.
+Purpose: answer "how is HitaruJP doing right now?" in five seconds.
 
 - **KPI row** (4 cards; a 2×2 grid on compact): Total users (with a "+N new in 7 days" sub-line), Daily active (with weekly and monthly underneath), Paid users (and the % of total), AI cost in the last 30 days (with the request count). Data comes from `stats/users` and `stats/ai?granularity=day&periods=30`.
 - **Active users, last 30 days**: a line chart from `stats/usage?granularity=day&periods=30`, with two series: active users (primary) and new users (accent). Tooltip on hover or tap.
@@ -659,7 +659,7 @@ ingrain_admin/
 │       │   └── presentation/ users_list_view.dart, user_detail_view.dart, *_view_model.dart
 │       └── settings/     presentation/ settings_view.dart
 ├── test/                                # mirrors lib/; support/ for fakes and pump helpers
-├── web/                                 # index.html title "ingrain admin", favicon
+├── web/                                 # index.html title "HitaruJP admin", favicon
 └── README.md
 ```
 

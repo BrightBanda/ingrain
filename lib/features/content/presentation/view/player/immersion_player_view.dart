@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:ingrain/app/theme/app_colors.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -352,7 +353,7 @@ class _ImmersionPlayerViewState extends ConsumerState<ImmersionPlayerView> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('ingrain'),
+        title: const Text('HitaruJP'),
         actions: [
           IconButton(
             icon: const Icon(Icons.edit_note),
@@ -420,10 +421,15 @@ class _ImmersionPlayerViewState extends ConsumerState<ImmersionPlayerView> {
                   child: Column(
                     children: [
                       Flexible(
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(16),
-                          child: player,
-                        ),
+                        // Rounded corners on mobile only: clipping the web
+                        // <iframe> re-applies a CSS clip every frame and
+                        // makes playback flicker.
+                        child: kIsWeb
+                            ? player
+                            : ClipRRect(
+                                borderRadius: BorderRadius.circular(16),
+                                child: player,
+                              ),
                       ),
                       ...controls,
                     ],
@@ -477,7 +483,11 @@ class _ImmersionPlayerViewState extends ConsumerState<ImmersionPlayerView> {
         return Stack(
           children: [
             YoutubePlayer(controller: _controller, aspectRatio: 16 / 9),
-            if (!_videoReady && _playerError == null)
+            // Not on web: there the player is an <iframe>, and Flutter
+            // painting over it (an animating spinner, every frame) makes the
+            // engine split each frame around the video, which stutters. The
+            // player already shows the video's thumbnail while it loads.
+            if (!kIsWeb && !_videoReady && _playerError == null)
               Positioned.fill(
                 child: ColoredBox(
                   color: Colors.black12,

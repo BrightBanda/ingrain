@@ -29,7 +29,7 @@ class ImmersionHomeView extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        title: const Text('ingrain'),
+        title: const Text('HitaruJP'),
         actions: [
           IconButton(
             icon: const Icon(Icons.search),

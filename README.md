@@ -1,4 +1,4 @@
-# ingrain
+# HitaruJP
 
 A new Flutter project.
 
@@ -31,3 +31,25 @@ In Render choose **New → Blueprint** and pick this repository.
   **Authentication → Settings → Authorized domains**, or Google sign-in fails.
 - Not available on web: Anki import (mobile only), YouTube search, and
   transcripts. Browsers block requests to youtube.com from other sites.
+
+## Android release setup
+
+The Android application ID is `com.hitarujp.app`, set in `android/app/build.gradle.kts`.
+It is permanent once the app is published.
+
+1. **Register the app in Firebase.** In project `ingrain-58270`, add an Android app
+   with package name `com.hitarujp.app`.
+2. **Add signing fingerprints.** Add the SHA-1 and SHA-256 of every key that signs the
+   app to that Firebase Android app: debug, upload, and Google Play's app signing key.
+   Google sign-in fails for any build whose key is missing. To print them:
+   `cd android && ./gradlew signingReport`
+3. **Regenerate the Firebase config.**
+   `flutterfire configure --project=ingrain-58270 --platforms=android,web`
+   This rewrites `android/app/google-services.json`, `lib/firebase_options.dart` and
+   `firebase.json`.
+4. **Create an upload key** (once, and back it up):
+   `keytool -genkey -v -keystore ~/keys/hitarujp-upload.jks -keyalg RSA -keysize 2048 -validity 10000 -alias upload`
+   Then copy `android/key.properties.example` to `android/key.properties` and fill it in.
+   Without that file, release builds are signed with the debug key, which the Play
+   Store rejects.
+5. **Build:** `flutter build appbundle --release`

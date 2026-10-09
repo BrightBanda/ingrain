@@ -8,7 +8,7 @@ Future<void> startAnkiImport(BuildContext context) => showDialog<void>(
     icon: const Icon(Icons.phone_android),
     title: const Text('Import from the mobile app'),
     content: const Text(
-      'Anki decks can be imported in the ingrain app on Android or iOS. '
+      'Anki decks can be imported in the HitaruJP app on Android or iOS. '
       'Once imported, they sync to your account and show up here too.',
     ),
     actions: [

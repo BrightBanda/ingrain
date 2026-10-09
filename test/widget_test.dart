@@ -18,6 +18,6 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('Welcome to ingrain'), findsOneWidget);
+    expect(find.text('Welcome to HitaruJP'), findsOneWidget);
   });
 }

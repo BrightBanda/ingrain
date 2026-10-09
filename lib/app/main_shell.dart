@@ -334,10 +334,17 @@ class _Sidebar extends ConsumerWidget {
                 children: [
                   const _LogoMark(),
                   const SizedBox(width: 12),
-                  Text(
-                    'ingrain',
-                    style: theme.textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w800,
+                  // Shrinks rather than overflowing at large text sizes.
+                  Flexible(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'HitaruJP',
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
                     ),
                   ),
                 ],

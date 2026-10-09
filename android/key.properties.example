@@ -1,0 +1,7 @@
+# Copy to android/key.properties (git-ignored) and fill in. Used to sign
+# release builds for the Play Store; see the README's Android release section.
+storePassword=your-keystore-password
+keyPassword=your-key-password
+keyAlias=upload
+# Absolute path, or relative to android/app/.
+storeFile=/home/you/keys/hitarujp-upload.jks

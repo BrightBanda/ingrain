@@ -199,7 +199,7 @@ void main() {
     ) async {
       await pumpApp(tester);
 
-      expect(find.text('ingrain'), findsOneWidget);
+      expect(find.text('HitaruJP'), findsOneWidget);
       expect(find.text('Start immersing'), findsOneWidget);
       expect(find.text("Today's goal"), findsOneWidget);
       expect(find.text('Flashcards'), findsWidgets);
@@ -601,7 +601,7 @@ void main() {
       await pressSystemBack(tester);
 
       expect(find.text(DoubleBackToExit.message), findsOneWidget);
-      expect(find.text('ingrain'), findsOneWidget);
+      expect(find.text('HitaruJP'), findsOneWidget);
       expect(exitCalls(), isEmpty);
     });
 
